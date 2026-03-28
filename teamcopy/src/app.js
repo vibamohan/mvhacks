@@ -26,6 +26,7 @@ const predictionStatus = document.querySelector("#predictionStatus");
 const predictionAnswer = document.querySelector("#predictionAnswer");
 const datasetCount = document.querySelector("#datasetCount");
 const statusNote = document.querySelector("#statusNote");
+const statsChartCanvas = document.querySelector("#statsChart");
 const chatForm = document.querySelector("#chatForm");
 const chatInput = document.querySelector("#chatInput");
 const chatSubmit = document.querySelector("#chatSubmit");
@@ -41,6 +42,7 @@ const concentrationColors = {
 };
 
 let selectedContext = null;
+let statsChart = null;
 
 function getMarkerColor(classText) {
   return concentrationColors[classText] || "#9fc0d4";
@@ -107,6 +109,74 @@ function averageMeasurement(items) {
   }
 
   return numericValues.reduce((sum, value) => sum + value, 0) / numericValues.length;
+}
+
+function renderConcentrationBreakdown(locations) {
+  if (!statsChartCanvas || typeof Chart === "undefined") {
+    return;
+  }
+
+  const classOrder = ["Very Low", "Low", "Medium", "High", "Very High"];
+  const counts = classOrder.map(
+    (className) => locations.filter((location) => location.concentrationClassText === className).length
+  );
+
+  if (statsChart) {
+    statsChart.destroy();
+  }
+
+  statsChart = new Chart(statsChartCanvas, {
+    type: "bar",
+    data: {
+      labels: classOrder,
+      datasets: [
+        {
+          label: "Samples",
+          data: counts,
+          backgroundColor: classOrder.map((className) => getMarkerColor(className)),
+          borderWidth: 0,
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+          ticks: {
+            color: "#9fc0d4",
+            font: {
+              family: "IBM Plex Mono",
+              size: 10,
+            },
+          },
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: "rgba(255,255,255,0.08)",
+          },
+          ticks: {
+            precision: 0,
+            color: "#9fc0d4",
+            font: {
+              family: "IBM Plex Mono",
+              size: 10,
+            },
+          },
+        },
+      },
+    },
+  });
 }
 
 function renderPredictions(report, nearbyReports) {
@@ -248,6 +318,7 @@ async function initMap() {
   const worldBounds = L.latLngBounds(L.latLng(-85, -180), L.latLng(85, 180));
 
   datasetCount.textContent = String(locations.length);
+  renderConcentrationBreakdown(locations);
 
   const map = L.map(mapElement, {
     preferCanvas: true,
@@ -310,6 +381,7 @@ async function initMap() {
         fetchNearbyMicroplasticsReports(lat, lng, 25),
       ]);
 
+      renderGlobalChart(locations);
       renderReport(nearestReport);
       renderPredictions(nearestReport, nearbyReports);
       selectedContext = {
