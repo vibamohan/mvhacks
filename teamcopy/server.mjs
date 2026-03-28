@@ -118,6 +118,41 @@ function groupYears(rows) {
     .map(([year, count]) => ({ year, count }));
 }
 
+function findDominantSeverity(rows, nearestSample) {
+  const counts = new Map();
+  for (const row of rows || []) {
+    const className = row.concentrationClassText || row.concentration || "Unknown";
+    counts.set(className, (counts.get(className) || 0) + 1);
+  }
+
+  if (counts.size === 0) {
+    return nearestSample?.concentrationClassText || "Unknown";
+  }
+
+  return [...counts.entries()].sort((left, right) => right[1] - left[1])[0][0];
+}
+
+function summarizeHistory(rows) {
+  const sortedRows = [...(rows || [])]
+    .filter((row) => row && (row.rawDate || row.date))
+    .sort((left, right) => {
+      const leftDate = new Date(left.rawDate ?? left.date).getTime();
+      const rightDate = new Date(right.rawDate ?? right.date).getTime();
+      return leftDate - rightDate;
+    });
+
+  return sortedRows.map((row) => ({
+    date: row.date,
+    year: row.date ? new Date(row.date).getUTCFullYear() : null,
+    concentration: row.concentrationClassText || row.concentration || "Unknown",
+    measurement: row.measurementLabel || row.measurement || null,
+    medium: row.medium || null,
+    region: row.region || null,
+    subRegion: row.subRegion || null,
+    ocean: row.ocean || null,
+  }));
+}
+
 async function handleChat(request, response) {
   if (!HUGGINGFACE_API_KEY) {
     sendJson(response, 500, {
@@ -311,6 +346,111 @@ You may infer gently from nearby rows and dates, but do not invent hard numeric 
   }
 }
 
+async function handleActions(request, response) {
+  if (!HUGGINGFACE_API_KEY) {
+    sendJson(response, 500, {
+      error: "Set HUGGINGFACE_API_KEY or HF_TOKEN before starting the server.",
+      provider: "huggingface",
+    });
+    return;
+  }
+
+  let body = "";
+  for await (const chunk of request) {
+    body += chunk;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    sendJson(response, 400, { error: "Invalid JSON body.", provider: "huggingface" });
+    return;
+  }
+
+  const { selectedPoint, nearestSample, nearbySamples } = payload;
+  if (!nearestSample) {
+    sendJson(response, 400, { error: "Nearest sample is required.", provider: "huggingface" });
+    return;
+  }
+
+  const dominantSeverity = findDominantSeverity(nearbySamples, nearestSample);
+  const yearlyCoverage = groupYears(nearbySamples || []);
+  const historySummary = summarizeHistory(nearbySamples || []);
+
+  try {
+    const modelResponse = await fetch(`${API_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: CHAT_MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You suggest practical environmental response steps using current local status and historical nearby sample rows. Keep the answer actionable, concise, grounded in the provided evidence, and organized into exactly two sections only: 'What common people can do' and 'What larger efforts can do'.",
+          },
+          {
+            role: "user",
+            content: `Suggest practical response steps for the selected marine microplastics location.
+
+Selected point:
+${JSON.stringify(selectedPoint, null, 2)}
+
+Nearest sample:
+${JSON.stringify(nearestSample, null, 2)}
+
+Nearby samples:
+${JSON.stringify(nearbySamples, null, 2)}
+
+Observed nearby year coverage:
+${JSON.stringify(yearlyCoverage, null, 2)}
+
+Historical nearby sample summary:
+${JSON.stringify(historySummary, null, 2)}
+
+Dominant nearby severity:
+${dominantSeverity}
+
+Write exactly two sections:
+1. What common people can do
+2. What larger efforts can do
+
+Base the suggestions on both the current status and the nearby historical pattern. If the history is thin, say that briefly and still give sensible actions based on the current severity and local context. Mention whether the surrounding rows suggest a persistent issue, a mixed pattern, or limited evidence. Keep it realistic and useful for this location.`,
+          },
+        ],
+      }),
+    });
+
+    const result = await modelResponse.json();
+    if (!modelResponse.ok) {
+      const providerMessage = result.error?.message || result.error || "Hugging Face request failed.";
+      sendJson(response, modelResponse.status, {
+        error:
+          providerMessage.includes("expected pattern")
+            ? `${providerMessage} Try a CHAT_MODEL value like "meta-llama/Llama-3.1-8B-Instruct:fastest".`
+            : providerMessage,
+        provider: "huggingface",
+      });
+      return;
+    }
+
+    sendJson(response, 200, {
+      answer: result.choices?.[0]?.message?.content || "No response",
+      rowsUsed: nearbySamples?.length || 0,
+      provider: "huggingface",
+    });
+  } catch (error) {
+    sendJson(response, 500, {
+      error: error.message || "Hugging Face request failed.",
+      provider: "huggingface",
+    });
+  }
+}
+
 
 function serveStatic(request, response) {
   const requestPath = request.url === "/" ? "/index.html" : request.url;
@@ -339,6 +479,11 @@ createServer(async (request, response) => {
 
     if (request.method === "POST" && request.url === "/api/predict") {
       await handlePrediction(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && request.url === "/api/actions") {
+      await handleActions(request, response);
       return;
     }
 

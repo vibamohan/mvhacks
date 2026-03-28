@@ -39,6 +39,43 @@ function formatDate(epochMs) {
   }).format(new Date(epochMs));
 }
 
+function formatMeasurementNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return "N/A";
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return "N/A";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(numericValue);
+}
+
+function normalizeUnit(unit) {
+  const unitMap = {
+    "pieces/m3": "pieces/m^3",
+    "pieces/10 mins": "pieces/10 min",
+    "pieces kg-1 d.w.": "pieces/kg dry weight",
+  };
+
+  return unitMap[unit] || unit || "";
+}
+
+function formatMeasurementLabel(measurement, unit) {
+  const formattedNumber = formatMeasurementNumber(measurement);
+  const formattedUnit = normalizeUnit(unit);
+
+  if (formattedNumber === "N/A") {
+    return "N/A";
+  }
+
+  return `${formattedNumber} ${formattedUnit}`.trim();
+}
+
 /**
  * Cleans up raw API data into a standard object format
  */
@@ -65,9 +102,8 @@ function normalizeFeature(feature) {
     subRegion: attributes.Location_SubRegions || "Unknown",
     medium: attributes.Medium || "Unknown",
     measurement: measurement,
-    // Fix: Added measurementLabel specifically for app.js popup logic
-    measurementLabel: measurement !== null ? measurement : "N/A",
-    unit: attributes.Unit || "",
+    measurementLabel: formatMeasurementLabel(measurement, attributes.Unit),
+    unit: normalizeUnit(attributes.Unit || ""),
     concentrationClassText: attributes.Concentration_class_text || "Unknown",
     dateLabel: formatDate(attributes.Date_m_d_yyyy),
     rawDate: attributes.Date_m_d_yyyy || null,

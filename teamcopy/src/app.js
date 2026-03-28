@@ -9,8 +9,6 @@ const mapElement = document.querySelector("#mapStage");
 const latitudeValue = document.querySelector("#latitudeValue");
 const longitudeValue = document.querySelector("#longitudeValue");
 const reportTitle = document.querySelector("#reportTitle");
-const regionValue = document.querySelector("#regionValue");
-const subRegionValue = document.querySelector("#subRegionValue");
 const oceanValue = document.querySelector("#oceanValue");
 const mediumValue = document.querySelector("#mediumValue");
 const measurementValue = document.querySelector("#measurementValue");
@@ -32,6 +30,10 @@ const chatInput = document.querySelector("#chatInput");
 const chatSubmit = document.querySelector("#chatSubmit");
 const chatStatus = document.querySelector("#chatStatus");
 const chatAnswer = document.querySelector("#chatAnswer");
+const actionsForm = document.querySelector("#actionsForm");
+const actionsSubmit = document.querySelector("#actionsSubmit");
+const actionsStatus = document.querySelector("#actionsStatus");
+const actionsAnswer = document.querySelector("#actionsAnswer");
 
 const concentrationColors = {
   "Very Low": "#5bc0eb",
@@ -43,6 +45,15 @@ const concentrationColors = {
 
 let selectedContext = null;
 let statsChart = null;
+const continentLabels = [
+  { name: "North America", latitude: 48, longitude: -105 },
+  { name: "South America", latitude: -18, longitude: -60 },
+  { name: "Europe", latitude: 54, longitude: 16 },
+  { name: "Africa", latitude: 7, longitude: 20 },
+  { name: "Asia", latitude: 40, longitude: 90 },
+  { name: "Australia", latitude: -25, longitude: 134 },
+  { name: "Antarctica", latitude: -76, longitude: 20 },
+];
 
 function getMarkerColor(classText) {
   return concentrationColors[classText] || "#9fc0d4";
@@ -55,8 +66,6 @@ function setSelectedCoordinates(latitude, longitude) {
 
 function resetReport() {
   reportTitle.textContent = "Click the map to inspect a sample";
-  regionValue.textContent = "--";
-  subRegionValue.textContent = "--";
   oceanValue.textContent = "--";
   mediumValue.textContent = "--";
   measurementValue.textContent = "--";
@@ -72,6 +81,9 @@ function resetPredictions() {
   predictionStatus.textContent =
     "Predictions use nearby samples and let the model estimate a plausible future scenario.";
   predictionAnswer.textContent = "Choose a point on the map, then generate a prediction.";
+  actionsStatus.textContent =
+    "This suggests actions using the selected location, nearby history, and current local severity.";
+  actionsAnswer.textContent = "Click a point on the map, then generate action steps.";
 }
 
 function renderReport(report) {
@@ -82,11 +94,9 @@ function renderReport(report) {
   }
 
   reportTitle.textContent = `Sample ${report.id}`;
-  regionValue.textContent = report.region;
-  subRegionValue.textContent = report.subRegion;
   oceanValue.textContent = report.ocean;
   mediumValue.textContent = report.medium;
-  measurementValue.textContent = `${report.measurementLabel} ${report.unit}`.trim();
+  measurementValue.textContent = report.measurementLabel;
   classTextValue.textContent = report.concentrationClassText;
   dateValue.textContent = report.dateLabel;
   distanceValue.textContent = `${report.distanceKm.toFixed(1)} km`;
@@ -106,6 +116,11 @@ function findMostCommon(items, key) {
 }
 
 function averageMeasurement(items) {
+  const units = [...new Set(items.map((item) => item.unit).filter(Boolean))];
+  if (units.length !== 1) {
+    return null;
+  }
+
   const numericValues = items
     .map((item) => item.measurement)
     .filter((value) => typeof value === "number" && Number.isFinite(value));
@@ -115,6 +130,24 @@ function averageMeasurement(items) {
   }
 
   return numericValues.reduce((sum, value) => sum + value, 0) / numericValues.length;
+}
+
+function getMostCommonUnit(items) {
+  return findMostCommon(items, "unit");
+}
+
+function addContinentLabels(map) {
+  continentLabels.forEach((continent) => {
+    L.marker([continent.latitude, continent.longitude], {
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: -1000,
+      icon: L.divIcon({
+        className: "continent-label-marker",
+        html: `<span class="continent-label">${continent.name}</span>`,
+      }),
+    }).addTo(map);
+  });
 }
 
 function renderConcentrationBreakdown(locations) {
@@ -191,15 +224,19 @@ function renderPredictions(report, nearbyReports) {
   const dominantClass = findMostCommon(nearbyReports, "concentrationClassText");
   const dominantMedium = findMostCommon(nearbyReports, "medium");
   const dominantOcean = findMostCommon(nearbyReports, "ocean");
-  const sameRegionCount = nearbyReports.filter((item) => item.region === report.region).length;
+  const dominantUnit = getMostCommonUnit(nearbyReports);
+  const sameOceanCount = nearbyReports.filter((item) => item.ocean === report.ocean).length;
 
   predictionSummary.textContent =
     `The nearest ${nearbyReports.length} samples around this click are dominated by ${dominantClass.toLowerCase()} readings in ${dominantOcean}.`;
 
   const bullets = [
-    `Average nearby measurement: ${average === null ? "Unavailable" : average.toFixed(2)} ${report.unit}`.trim(),
+    `Average nearby measurement: ${
+      average === null || !dominantUnit ? "Unavailable" : `${average.toFixed(2)} ${dominantUnit}`
+    }`.trim(),
     `Most common sample medium nearby: ${dominantMedium}.`,
-    `Samples in the same region as the nearest point: ${sameRegionCount} of ${nearbyReports.length}.`,
+    `Samples in the same ocean as the nearest point: ${sameOceanCount} of ${nearbyReports.length}.`,
+    `Nearby measurements are ${average === null ? "mixed across unit types, so the average is hidden." : `shown in ${dominantUnit}.`}`,
     `Nearest sample date: ${report.dateLabel}. Nearby dates may vary, so this is a local pattern, not a forecast.`,
   ];
 
@@ -320,6 +357,46 @@ async function handlePredictionSubmit(event) {
   }
 }
 
+async function handleActionsSubmit(event) {
+  event.preventDefault();
+
+  if (!selectedContext) {
+    actionsStatus.textContent = "Click a point on the map first so the action plan has local history and status.";
+    return;
+  }
+
+  actionsSubmit.disabled = true;
+  actionsStatus.textContent = "Generating action steps...";
+  actionsAnswer.textContent = "Waiting for response...";
+
+  try {
+    const response = await fetch("/api/actions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        selectedPoint: selectedContext.selectedPoint,
+        nearestSample: selectedContext.nearestSample,
+        nearbySamples: selectedContext.nearbySamples,
+      }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Actions request failed");
+    }
+
+    actionsStatus.textContent = `Generated through ${payload.provider || "the API"}.`;
+    actionsAnswer.textContent = payload.answer;
+  } catch (error) {
+    actionsStatus.textContent = "Actions request failed.";
+    actionsAnswer.textContent = error.message;
+  } finally {
+    actionsSubmit.disabled = false;
+  }
+}
+
 async function initMap() {
   const locations = await fetchMicroplasticsLocations();
   const worldBounds = L.latLngBounds(L.latLng(-85, -180), L.latLng(85, 180));
@@ -341,6 +418,8 @@ async function initMap() {
     noWrap: true,
   }).addTo(map);
 
+  addContinentLabels(map);
+
   const samplesLayer = L.layerGroup().addTo(map);
 
   locations.forEach((location) => {
@@ -354,10 +433,9 @@ async function initMap() {
       .bindPopup(
         `<strong>Sample ${location.id}</strong><br>` +
           `${formatCoordinate(location.latitude, "lat")}, ${formatCoordinate(location.longitude, "lon")}<br>` +
-          `${location.region} / ${location.subRegion}<br>` +
           `${location.ocean}<br>` +
           `${location.medium}<br>` +
-          `${location.measurementLabel} ${location.unit}<br>` +
+          `${location.measurementLabel}<br>` +
           `${location.concentrationClassText}<br>` +
           `${location.dateLabel}`
       )
@@ -425,6 +503,7 @@ async function initMap() {
 
   chatForm.addEventListener("submit", handleChatSubmit);
   predictionForm.addEventListener("submit", handlePredictionSubmit);
+  actionsForm.addEventListener("submit", handleActionsSubmit);
 
   statusNote.textContent =
     "Map ready. Every dot is a microplastics sample from the dataset. Click anywhere to inspect the nearest one.";

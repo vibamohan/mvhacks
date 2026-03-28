@@ -104,14 +104,6 @@
             <div class="depth-divider">sample data</div>
             <dl class="report-stats">
               <div>
-                <dt>Region</dt>
-                <dd id="regionValue">--</dd>
-              </div>
-              <div>
-                <dt>Sub Region</dt>
-                <dd id="subRegionValue">--</dd>
-              </div>
-              <div>
                 <dt>Ocean</dt>
                 <dd id="oceanValue">--</dd>
               </div>
@@ -194,6 +186,20 @@
           </p>
           <div id="chatAnswer" class="chat-answer">
             Ask a question after selecting a point on the map.
+          </div>
+        </section>
+
+        <section class="panel-card">
+          <p class="panel-label">Response Steps</p>
+          <h3>Potential solutions at this location</h3>
+          <form id="actionsForm" class="chat-form">
+            <button type="submit" id="actionsSubmit">Generate action steps</button>
+          </form>
+          <p id="actionsStatus" class="report-summary">
+            This suggests actions using the selected location, nearby severity, and local context.
+          </p>
+          <div id="actionsAnswer" class="chat-answer">
+            Click a point on the map, then generate action steps.
           </div>
         </section>
       </section>

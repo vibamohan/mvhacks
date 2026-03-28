@@ -373,13 +373,14 @@ body::after {
 
 .widget-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+  align-items: start;
 }
 
 .widget-row--below-map {
   margin-top: 24px;
-  width: min(100%, calc((100% - 24px) * 1.8 / 2.8));
+  width: 100%;
 }
 
 /* Flicker animation on update */
@@ -635,6 +636,27 @@ body::after {
   background: rgba(7, 31, 53, 0.95) !important;
 }
 
+.continent-label-marker {
+  background: transparent;
+  border: 0;
+}
+
+.continent-label {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(4, 24, 36, 0.58);
+  border: 1px solid rgba(157, 225, 255, 0.18);
+  color: rgba(239, 249, 255, 0.88);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+}
+
 /* ─── RESPONSIVE ─── */
 @media (max-width: 980px) {
   .workspace {
@@ -681,4 +703,4 @@ body::after {
   .hero-image-container {
     width: 100%;
   }
-}
+}}
