@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ocean Trash Locator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Interactive Prototype</p>
+        <h1>Ocean Trash Locator</h1>
+        <p class="hero-copy">
+          Click anywhere on the map to get exact latitude and longitude, see the
+          nearest known trash hotspot, and compare it with transparent ocean zone overlays.
+        </p>
+      </header>
+
+      <main class="workspace">
+        <section class="map-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-label">World Surface</p>
+              <h2>Accurate Ocean Map</h2>
+            </div>
+            <div class="legend">
+              <span><i class="legend-swatch legend-swatch--zone"></i> Ocean zone overlay</span>
+              <span><i class="legend-swatch legend-swatch--known"></i> Dataset hotspot</span>
+              <span><i class="legend-swatch legend-swatch--click"></i> Your click</span>
+            </div>
+          </div>
+
+          <div class="map-frame">
+            <div id="mapStage" aria-label="Interactive world ocean map"></div>
+          </div>
+
+          <div class="map-footnote">
+            <p>
+              <strong id="datasetCount">0</strong> hotspot locations are shown on the map at all times.
+            </p>
+            <p id="statusNote">
+              Map is loading.
+            </p>
+          </div>
+        </section>
+
+        <aside class="info-panel">
+          <div class="panel-card">
+            <p class="panel-label">Selected Point</p>
+            <div class="coordinate-grid">
+              <div>
+                <span class="metric-label">Latitude</span>
+                <strong id="latitudeValue">--</strong>
+              </div>
+              <div>
+                <span class="metric-label">Longitude</span>
+                <strong id="longitudeValue">--</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <p class="panel-label">Nearest Hotspot</p>
+            <h3 id="reportTitle">Click the map to inspect a location</h3>
+            <p id="reportSummary" class="report-summary">
+              The app will compare your clicked position against every hotspot and explain the closest one in simpler language.
+            </p>
+
+            <dl class="report-stats">
+              <div>
+                <dt>Ocean Zone</dt>
+                <dd id="zoneValue">--</dd>
+              </div>
+              <div>
+                <dt>Concentration</dt>
+                <dd id="densityValue">--</dd>
+              </div>
+              <div>
+                <dt>Main Plastic</dt>
+                <dd id="debrisValue">--</dd>
+              </div>
+              <div>
+                <dt>Distance</dt>
+                <dd id="distanceValue">--</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="panel-card">
+            <p class="panel-label">Animals Impacted</p>
+            <p id="animalsValue" class="report-summary">
+              Click a hotspot to see which animals are commonly affected in that region.
+            </p>
+          </div>
+
+          <div class="panel-card">
+            <p class="panel-label">Plastic Examples</p>
+            <ul id="plasticsList" class="stack-list">
+              <li>Choose a location to see real-life examples of common plastics in that zone.</li>
+            </ul>
+          </div>
+
+          <div class="panel-card panel-card--muted">
+            <p class="panel-label">Sources</p>
+            <ul id="sourceList" class="stack-list">
+              <li>Choose a location to load official source links.</li>
+            </ul>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
