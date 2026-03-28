@@ -371,6 +371,17 @@ body::after {
   gap: 18px;
 }
 
+.widget-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.widget-row--below-map {
+  margin-top: 24px;
+  width: min(100%, calc((100% - 24px) * 1.8 / 2.8));
+}
+
 /* Flicker animation on update */
 @keyframes flickerIn {
   0%   { opacity: 0.2; }
@@ -631,6 +642,14 @@ body::after {
   }
   .map-footnote {
     flex-direction: column;
+  }
+
+  .widget-row {
+    grid-template-columns: 1fr;
+  }
+
+  .widget-row--below-map {
+    width: 100%;
   }
 }
 

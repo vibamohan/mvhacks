@@ -67,10 +67,8 @@
               <p class="panel-label">Dataset Map</p>
               <h2>Global Marine Microplastics Samples</h2>
             </div>
-            <div class="legend">
-              <span><i class="legend-swatch legend-swatch--sample"></i> Sample point</span>
-              <span><i class="legend-swatch legend-swatch--click"></i> Your click</span>
-            </div>
+
+
           </div>
 
           <div class="map-frame">
@@ -149,53 +147,56 @@
             </div>
           </section>
 
-          <section class="panel-card">
-            <p class="panel-label">Predictions</p>
-            <h3>Local pattern summary</h3>
-            <p id="predictionSummary" class="report-summary">
-              Click the map to estimate what nearby samples suggest about concentration patterns.
-            </p>
-            <ul id="predictionBullets" class="stack-list">
-              <li>Nearby rows will be summarized here.</li>
-            </ul>
-            <form id="predictionForm" class="chat-form prediction-form">
-              <label class="metric-label" for="predictionHorizon">Prediction horizon</label>
-              <select id="predictionHorizon" name="years">
-                <option value="1">1 year from now</option>
-                <option value="5" selected>5 years from now</option>
-                <option value="10">10 years from now</option>
-              </select>
-              <button type="submit" id="predictionSubmit">Generate prediction</button>
-            </form>
-            <p id="predictionStatus" class="report-summary">
-              Predictions use nearby samples and let the model estimate a plausible future scenario.
-            </p>
-            <div id="predictionAnswer" class="chat-answer">
-              Choose a point on the map, then generate a prediction.
-            </div>
-          </section>
-
-          <section class="panel-card panel-card--muted">
-            <p class="panel-label">Ask the Dataset</p>
-            <form id="chatForm" class="chat-form">
-              <label class="metric-label" for="chatInput">Question</label>
-              <textarea
-                id="chatInput"
-                name="question"
-                rows="4"
-                placeholder="Why might this area have a high concentration class?"
-              ></textarea>
-              <button type="submit" id="chatSubmit">Ask</button>
-            </form>
-            <p id="chatStatus" class="report-summary">
-              The chatbot uses the current clicked location and nearby dataset rows as context.
-            </p>
-            <div id="chatAnswer" class="chat-answer">
-              Ask a question after selecting a point on the map.
-            </div>
-          </section>
         </aside>
       </main>
+
+      <section class="widget-row widget-row--below-map">
+        <section class="panel-card">
+          <p class="panel-label">Predictions</p>
+          <h3>Local pattern summary</h3>
+          <p id="predictionSummary" class="report-summary">
+            Click the map to estimate what nearby samples suggest about concentration patterns.
+          </p>
+          <ul id="predictionBullets" class="stack-list">
+            <li>Nearby rows will be summarized here.</li>
+          </ul>
+          <form id="predictionForm" class="chat-form prediction-form">
+            <label class="metric-label" for="predictionHorizon">Prediction horizon</label>
+            <select id="predictionHorizon" name="years">
+              <option value="1">1 year from now</option>
+              <option value="5" selected>5 years from now</option>
+              <option value="10">10 years from now</option>
+            </select>
+            <button type="submit" id="predictionSubmit">Generate prediction</button>
+          </form>
+          <p id="predictionStatus" class="report-summary">
+            Predictions use nearby samples and let the model estimate a plausible future scenario.
+          </p>
+          <div id="predictionAnswer" class="chat-answer">
+            Choose a point on the map, then generate a prediction.
+          </div>
+        </section>
+
+        <section class="panel-card panel-card--muted">
+          <p class="panel-label">Ask the Dataset</p>
+          <form id="chatForm" class="chat-form">
+            <label class="metric-label" for="chatInput">Question</label>
+            <textarea
+              id="chatInput"
+              name="question"
+              rows="4"
+              placeholder="Why might this area have a high concentration class?"
+            ></textarea>
+            <button type="submit" id="chatSubmit">Ask</button>
+          </form>
+          <p id="chatStatus" class="report-summary">
+            The chatbot uses the current clicked location and nearby dataset rows as context.
+          </p>
+          <div id="chatAnswer" class="chat-answer">
+            Ask a question after selecting a point on the map.
+          </div>
+        </section>
+      </section>
     </div>
 
     <script

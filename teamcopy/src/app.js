@@ -140,6 +140,7 @@ function renderConcentrationBreakdown(locations) {
           label: "Samples",
           data: counts,
           backgroundColor: classOrder.map((className) => getMarkerColor(className)),
+          
           borderWidth: 0,
           borderRadius: 6,
         },
