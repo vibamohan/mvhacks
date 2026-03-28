@@ -75,6 +75,12 @@ function resetPredictions() {
 }
 
 function renderReport(report) {
+  if (!report) {
+    resetReport();
+    reportTitle.textContent = "No nearby sample found";
+    return;
+  }
+
   reportTitle.textContent = `Sample ${report.id}`;
   regionValue.textContent = report.region;
   subRegionValue.textContent = report.subRegion;
@@ -381,7 +387,10 @@ async function initMap() {
         fetchNearbyMicroplasticsReports(lat, lng, 25),
       ]);
 
-      renderGlobalChart(locations);
+      if (!nearestReport) {
+        throw new Error("No nearest sample was found for this clicked point.");
+      }
+
       renderReport(nearestReport);
       renderPredictions(nearestReport, nearbyReports);
       selectedContext = {
@@ -406,8 +415,9 @@ async function initMap() {
     } catch (error) {
       resetReport();
       resetPredictions();
+      reportTitle.textContent = "Nearest sample lookup failed";
       statusNote.textContent =
-        "The marine microplastics dataset could not be loaded. Run this folder from a local web server and try again.";
+        "The clicked point could not be matched to a sample. Check the console and try another location.";
       console.error(error);
     }
   });
