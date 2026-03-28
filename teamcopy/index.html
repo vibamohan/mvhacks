@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ocean Trash Locator</title>
+    <title>Marine Microplastics Map</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -21,11 +21,11 @@
   <body>
     <div class="page-shell">
       <header class="hero">
-        <p class="eyebrow">Interactive Prototype</p>
-        <h1>Ocean Trash Locator</h1>
+        <p class="eyebrow">Interactive Dataset Viewer</p>
+        <h1>Marine Microplastics Map</h1>
         <p class="hero-copy">
-          Click anywhere on the map to get exact latitude and longitude, see the
-          nearest known trash hotspot, and compare it with transparent ocean zone overlays.
+          Click the map to inspect the nearest marine microplastics sample, see a local prediction
+          summary based on nearby rows, and ask a chatbot to explain what may be happening in that area.
         </p>
       </header>
 
@@ -33,111 +33,120 @@
         <section class="map-panel">
           <div class="panel-header">
             <div>
-              <p class="panel-label">World Surface</p>
-              <h2>Accurate Ocean Map</h2>
+              <p class="panel-label">Dataset Map</p>
+              <h2>Global Marine Microplastics Samples</h2>
             </div>
             <div class="legend">
-              <span><i class="legend-swatch legend-swatch--zone"></i> Ocean zone overlay</span>
-              <span><i class="legend-swatch legend-swatch--known"></i> Dataset hotspot</span>
+              <span><i class="legend-swatch legend-swatch--sample"></i> Sample point</span>
               <span><i class="legend-swatch legend-swatch--click"></i> Your click</span>
             </div>
           </div>
 
           <div class="map-frame">
-            <div id="mapStage" aria-label="Interactive world ocean map"></div>
+            <div id="mapStage" aria-label="Interactive marine microplastics map"></div>
           </div>
 
           <div class="map-footnote">
             <p>
-              <strong id="datasetCount">0</strong> hotspot locations are shown on the map at all times.
+              <strong id="datasetCount">0</strong> marine microplastics samples are loaded on the map.
             </p>
-            <p id="statusNote">
-              Map is loading.
-            </p>
+            <p id="statusNote">Map is loading.</p>
           </div>
         </section>
 
         <aside class="info-panel">
-  <div class="panel-card">
-    <p class="panel-label">Selected Point</p>
-    <div class="coordinate-grid">
-      <div>
-        <span class="metric-label">Latitude</span>
-        <strong id="latitudeValue">--</strong>
-      </div>
-      <div>
-        <span class="metric-label">Longitude</span>
-        <strong id="longitudeValue">--</strong>
-      </div>
-    </div>
-  </div>
+          <section class="panel-card">
+            <p class="panel-label">Selected Point</p>
+            <div class="coordinate-grid">
+              <div>
+                <span class="metric-label">Latitude</span>
+                <strong id="latitudeValue">--</strong>
+              </div>
+              <div>
+                <span class="metric-label">Longitude</span>
+                <strong id="longitudeValue">--</strong>
+              </div>
+            </div>
+          </section>
 
-  <div class="panel-card">
-    <p class="panel-label">Global Distribution</p>
-    <div style="margin-top: 15px; height: 200px;">
-      <canvas id="statsChart"></canvas>
-    </div>
-  </div>
-
-  </aside>
-
-          <div class="panel-card">
-            <p class="panel-label">Nearest Hotspot</p>
-            <h3 id="reportTitle">Click the map to inspect a location</h3>
-            <p id="reportSummary" class="report-summary">
-              The app will compare your clicked position against every hotspot and explain the closest one in simpler language.
-            </p>
-
+          <section class="panel-card">
+            <p class="panel-label">Nearest Sample</p>
+            <h3 id="reportTitle">Click the map to inspect a sample</h3>
             <dl class="report-stats">
               <div>
-                <dt>Ocean Zone</dt>
-                <dd id="zoneValue">--</dd>
+                <dt>Region</dt>
+                <dd id="regionValue">--</dd>
               </div>
               <div>
-                <dt>Concentration</dt>
-                <dd id="densityValue">--</dd>
+                <dt>Sub Region</dt>
+                <dd id="subRegionValue">--</dd>
               </div>
               <div>
-                <dt>Main Plastic</dt>
-                <dd id="debrisValue">--</dd>
+                <dt>Ocean</dt>
+                <dd id="oceanValue">--</dd>
+              </div>
+              <div>
+                <dt>Medium</dt>
+                <dd id="mediumValue">--</dd>
+              </div>
+              <div>
+                <dt>Measurement</dt>
+                <dd id="measurementValue">--</dd>
+              </div>
+              <div>
+                <dt>Class</dt>
+                <dd id="classTextValue">--</dd>
+              </div>
+              <div>
+                <dt>Date</dt>
+                <dd id="dateValue">--</dd>
               </div>
               <div>
                 <dt>Distance</dt>
                 <dd id="distanceValue">--</dd>
               </div>
             </dl>
-          </div>
+          </section>
 
-          <div class="panel-card">
-            <p class="panel-label">Animals Impacted</p>
-            <p id="animalsValue" class="report-summary">
-              Click a hotspot to see which animals are commonly affected in that region.
+          <section class="panel-card">
+            <p class="panel-label">Predictions</p>
+            <h3>Local pattern summary</h3>
+            <p id="predictionSummary" class="report-summary">
+              Click the map to estimate what nearby samples suggest about concentration patterns.
             </p>
-          </div>
-
-          <div class="panel-card">
-            <p class="panel-label">Plastic Examples</p>
-            <ul id="plasticsList" class="stack-list">
-              <li>Choose a location to see real-life examples of common plastics in that zone.</li>
+            <ul id="predictionBullets" class="stack-list">
+              <li>Nearby rows will be summarized here.</li>
             </ul>
-          </div>
+          </section>
 
-          <div class="panel-card panel-card--muted">
-            <p class="panel-label">Sources</p>
-            <ul id="sourceList" class="stack-list">
-              <li>Choose a location to load official source links.</li>
-            </ul>
-          </div>
+          <section class="panel-card panel-card--muted">
+            <p class="panel-label">Ask the Dataset</p>
+            <form id="chatForm" class="chat-form">
+              <label class="metric-label" for="chatInput">Question</label>
+              <textarea
+                id="chatInput"
+                name="question"
+                rows="4"
+                placeholder="Why might this area have a high concentration class?"
+              ></textarea>
+              <button type="submit" id="chatSubmit">Ask</button>
+            </form>
+            <p id="chatStatus" class="report-summary">
+              The chatbot uses the current clicked location and nearby dataset rows as context.
+            </p>
+            <div id="chatAnswer" class="chat-answer">
+              Ask a question after selecting a point on the map.
+            </div>
+          </section>
         </aside>
       </main>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-
     <script type="module" src="./src/app.js"></script>
+  </body>
 </html>

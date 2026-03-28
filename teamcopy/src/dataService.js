@@ -30,14 +30,20 @@ function formatDate(epochMs) {
   }).format(new Date(epochMs));
 }
 
+function parseNumericValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function normalizeFeature(feature) {
   const attributes = feature.attributes;
-  const rawMeasurement = attributes.Microplastics_measurement;
-  const fallbackMeasurement = attributes.Standardized_Nurdle__Amount;
-  const measurement =
-    rawMeasurement ?? (fallbackMeasurement !== null && fallbackMeasurement !== undefined && fallbackMeasurement !== ""
-      ? Number(fallbackMeasurement)
-      : null);
+  const directMeasurement = parseNumericValue(attributes.Microplastics_measurement);
+  const fallbackMeasurement = parseNumericValue(attributes.Standardized_Nurdle__Amount);
+  const measurement = directMeasurement ?? fallbackMeasurement;
 
   return {
     id: attributes.OBJECTID,
@@ -48,13 +54,13 @@ function normalizeFeature(feature) {
     subRegion: attributes.Location_SubRegions || "Unknown",
     medium: attributes.Medium || "Unknown",
     measurement,
+    measurementLabel: measurement === null ? "Unavailable" : String(measurement),
     unit: attributes.Unit || "",
     concentrationClassText: attributes.Concentration_class_text || "Unknown",
     dateLabel: formatDate(attributes.Date_m_d_yyyy),
     rawDate: attributes.Date_m_d_yyyy ?? null,
-    measurementSource: rawMeasurement !== null && rawMeasurement !== undefined
-      ? "Microplastics_measurement"
-      : "Standardized_Nurdle__Amount",
+    measurementSource:
+      directMeasurement !== null ? "Microplastics_measurement" : "Standardized_Nurdle__Amount",
   };
 }
 
@@ -91,4 +97,15 @@ export async function fetchNearestMicroplasticsReport(latitude, longitude) {
       distanceKm: haversineDistanceKm(latitude, longitude, location.latitude, location.longitude),
     }))
     .sort((left, right) => left.distanceKm - right.distanceKm)[0];
+}
+
+export async function fetchNearbyMicroplasticsReports(latitude, longitude, limit = 25) {
+  const locations = await fetchMicroplasticsLocations();
+  return locations
+    .map((location) => ({
+      ...location,
+      distanceKm: haversineDistanceKm(latitude, longitude, location.latitude, location.longitude),
+    }))
+    .sort((left, right) => left.distanceKm - right.distanceKm)
+    .slice(0, limit);
 }
