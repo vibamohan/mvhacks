@@ -19,6 +19,11 @@ const dateValue = document.querySelector("#dateValue");
 const distanceValue = document.querySelector("#distanceValue");
 const predictionSummary = document.querySelector("#predictionSummary");
 const predictionBullets = document.querySelector("#predictionBullets");
+const predictionForm = document.querySelector("#predictionForm");
+const predictionHorizon = document.querySelector("#predictionHorizon");
+const predictionSubmit = document.querySelector("#predictionSubmit");
+const predictionStatus = document.querySelector("#predictionStatus");
+const predictionAnswer = document.querySelector("#predictionAnswer");
 const datasetCount = document.querySelector("#datasetCount");
 const statusNote = document.querySelector("#statusNote");
 const chatForm = document.querySelector("#chatForm");
@@ -62,6 +67,9 @@ function resetPredictions() {
   predictionSummary.textContent =
     "Click the map to estimate what nearby samples suggest about concentration patterns.";
   predictionBullets.innerHTML = "<li>Nearby rows will be summarized here.</li>";
+  predictionStatus.textContent =
+    "Predictions use nearby samples and let the model estimate a plausible future scenario.";
+  predictionAnswer.textContent = "Choose a point on the map, then generate a prediction.";
 }
 
 function renderReport(report) {
@@ -174,7 +182,11 @@ async function handleChatSubmit(event) {
       }
 
       if (errorText.toLowerCase().includes("set either openai_api_key or groq_api_key")) {
-        throw new Error("Server is missing an API key. Start it with OPENAI_API_KEY or GROQ_API_KEY.");
+        throw new Error("Server is missing an API key. Start it with HUGGINGFACE_API_KEY or HF_TOKEN.");
+      }
+
+      if (errorText.toLowerCase().includes("set huggingface_api_key") || errorText.toLowerCase().includes("hf_token")) {
+        throw new Error("Server is missing a Hugging Face API key. Start it with HUGGINGFACE_API_KEY or HF_TOKEN.");
       }
 
       throw new Error(errorText);
@@ -187,6 +199,47 @@ async function handleChatSubmit(event) {
     chatAnswer.textContent = error.message;
   } finally {
     chatSubmit.disabled = false;
+  }
+}
+
+async function handlePredictionSubmit(event) {
+  event.preventDefault();
+
+  if (!selectedContext) {
+    predictionStatus.textContent = "Click a point on the map first so the prediction has local context.";
+    return;
+  }
+
+  predictionSubmit.disabled = true;
+  predictionStatus.textContent = "Generating a model-based estimate...";
+  predictionAnswer.textContent = "Waiting for response...";
+
+  try {
+    const response = await fetch("/api/predict", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        years: Number(predictionHorizon.value),
+        selectedPoint: selectedContext.selectedPoint,
+        nearestSample: selectedContext.nearestSample,
+        nearbySamples: selectedContext.nearbySamples,
+      }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Prediction request failed");
+    }
+
+    predictionStatus.textContent = `Estimated using ${payload.rowsUsed} nearby dataset rows through ${payload.provider || "the API"}.`;
+    predictionAnswer.textContent = payload.answer;
+  } catch (error) {
+    predictionStatus.textContent = "Prediction request failed.";
+    predictionAnswer.textContent = error.message;
+  } finally {
+    predictionSubmit.disabled = false;
   }
 }
 
@@ -288,6 +341,7 @@ async function initMap() {
   });
 
   chatForm.addEventListener("submit", handleChatSubmit);
+  predictionForm.addEventListener("submit", handlePredictionSubmit);
 
   statusNote.textContent =
     "Map ready. Every dot is a microplastics sample from the dataset. Click anywhere to inspect the nearest one.";

@@ -19,6 +19,10 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+
+    <!-- Animated particle/wave background -->
+    <canvas id="bgCanvas"></canvas>
+
     <div class="page-shell">
       <header class="hero">
         <p class="eyebrow">Interactive Dataset Viewer</p>
@@ -27,6 +31,24 @@
           Click the map to inspect the nearest marine microplastics sample, see a local prediction
           summary based on nearby rows, and ask a chatbot to explain what may be happening in that area.
         </p>
+
+        <!-- Concentration gradient legend bar -->
+        <div class="concentration-legend">
+          <div class="concentration-legend-track">
+            <span style="background:#5bc0eb"></span>
+            <span style="background:#80ed99"></span>
+            <span style="background:#ffd166"></span>
+            <span style="background:#f77f00"></span>
+            <span style="background:#8e2b2b"></span>
+          </div>
+        </div>
+        <div class="concentration-legend-labels">
+          <span>Very Low</span>
+          <span>Low</span>
+          <span>Medium</span>
+          <span>High</span>
+          <span>Very High</span>
+        </div>
       </header>
 
       <main class="workspace">
@@ -72,6 +94,7 @@
           <section class="panel-card">
             <p class="panel-label">Nearest Sample</p>
             <h3 id="reportTitle">Click the map to inspect a sample</h3>
+            <div class="depth-divider">sample data</div>
             <dl class="report-stats">
               <div>
                 <dt>Region</dt>
@@ -95,7 +118,7 @@
               </div>
               <div>
                 <dt>Class</dt>
-                <dd id="classTextValue">--</dd>
+                <dd><span id="classTextValue">--</span></dd>
               </div>
               <div>
                 <dt>Date</dt>
@@ -108,6 +131,15 @@
             </dl>
           </section>
 
+          <!-- Global stats chart card -->
+          <section class="panel-card">
+            <p class="panel-label">Global Distribution</p>
+            <h3>Concentration class breakdown</h3>
+            <div class="stats-chart-wrapper">
+              <canvas id="statsChart"></canvas>
+            </div>
+          </section>
+
           <section class="panel-card">
             <p class="panel-label">Predictions</p>
             <h3>Local pattern summary</h3>
@@ -117,6 +149,21 @@
             <ul id="predictionBullets" class="stack-list">
               <li>Nearby rows will be summarized here.</li>
             </ul>
+            <form id="predictionForm" class="chat-form prediction-form">
+              <label class="metric-label" for="predictionHorizon">Prediction horizon</label>
+              <select id="predictionHorizon" name="years">
+                <option value="1">1 year from now</option>
+                <option value="5" selected>5 years from now</option>
+                <option value="10">10 years from now</option>
+              </select>
+              <button type="submit" id="predictionSubmit">Generate prediction</button>
+            </form>
+            <p id="predictionStatus" class="report-summary">
+              Predictions use nearby samples and let the model estimate a plausible future scenario.
+            </p>
+            <div id="predictionAnswer" class="chat-answer">
+              Choose a point on the map, then generate a prediction.
+            </div>
           </section>
 
           <section class="panel-card panel-card--muted">
@@ -147,6 +194,94 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Background wave/particle animation -->
+    <script>
+      (function () {
+        const canvas = document.getElementById("bgCanvas");
+        const ctx = canvas.getContext("2d");
+        let W, H, particles;
+
+        function resize() {
+          W = canvas.width = window.innerWidth;
+          H = canvas.height = window.innerHeight;
+        }
+
+        function initParticles() {
+          particles = Array.from({ length: 55 }, () => ({
+            x: Math.random() * W,
+            y: Math.random() * H,
+            r: Math.random() * 1.4 + 0.3,
+            vx: (Math.random() - 0.5) * 0.18,
+            vy: (Math.random() - 0.5) * 0.18,
+            alpha: Math.random() * 0.5 + 0.1,
+          }));
+        }
+
+        function drawWave(offset, alpha, color) {
+          ctx.beginPath();
+          ctx.moveTo(0, H * 0.5);
+          for (let x = 0; x <= W; x += 4) {
+            const y =
+              H * 0.5 +
+              Math.sin((x / W) * Math.PI * 4 + offset) * 28 +
+              Math.sin((x / W) * Math.PI * 7 + offset * 0.7) * 14;
+            ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = color;
+          ctx.globalAlpha = alpha;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+
+        let t = 0;
+        function frame() {
+          ctx.clearRect(0, 0, W, H);
+          t += 0.006;
+
+          // Subtle waves
+          drawWave(t,       0.12, "#72e6ff");
+          drawWave(t + 1.2, 0.07, "#2fb4d6");
+          drawWave(t + 2.4, 0.05, "#ff7b00");
+
+          // Floating particles
+          for (const p of particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0) p.x = W;
+            if (p.x > W) p.x = 0;
+            if (p.y < 0) p.y = H;
+            if (p.y > H) p.y = 0;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(114, 230, 255, ${p.alpha})`;
+            ctx.fill();
+          }
+
+          requestAnimationFrame(frame);
+        }
+
+        resize();
+        initParticles();
+        frame();
+        window.addEventListener("resize", () => { resize(); initParticles(); });
+      })();
+    </script>
+
+    <!-- Patch classTextValue to apply data-class for CSS badge coloring -->
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const classEl = document.getElementById("classTextValue");
+        if (!classEl) return;
+        const observer = new MutationObserver(() => {
+          classEl.dataset.class = classEl.textContent.trim();
+        });
+        observer.observe(classEl, { childList: true, characterData: true, subtree: true });
+      });
+    </script>
+
     <script type="module" src="./src/app.js"></script>
   </body>
 </html>

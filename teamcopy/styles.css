@@ -23,16 +23,71 @@ body {
     radial-gradient(circle at bottom right, rgba(255, 123, 0, 0.12), transparent 28%),
     linear-gradient(180deg, #03101a 0%, #08263c 100%);
   color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ─── ANIMATED BACKGROUND CANVAS ─── */
+#bgCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+}
+
+/* ─── SCANLINE OVERLAY ─── */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.04) 2px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
 }
 
 .page-shell {
+  position: relative;
+  z-index: 2;
   width: min(1440px, calc(100% - 32px));
   margin: 0 auto;
   padding: 32px 0 40px;
 }
 
+/* ─── HERO ─── */
 .hero {
   margin-bottom: 28px;
+  position: relative;
+}
+
+/* Decorative sonar ring behind the title */
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -60px;
+  right: -80px;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  border: 1px solid rgba(114, 230, 255, 0.07);
+  box-shadow:
+    0 0 0 30px rgba(114, 230, 255, 0.04),
+    0 0 0 70px rgba(114, 230, 255, 0.025),
+    0 0 0 130px rgba(114, 230, 255, 0.012);
+  pointer-events: none;
+  animation: sonarPulse 6s ease-in-out infinite;
+}
+
+@keyframes sonarPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.04); opacity: 0.6; }
 }
 
 .eyebrow,
@@ -50,18 +105,27 @@ body {
   font-size: 0.78rem;
 }
 
+/* Eyebrow with blinking cursor */
+.eyebrow::after {
+  content: "_";
+  animation: blink 1.1s step-end infinite;
+  color: var(--accent);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 .hero h1 {
   margin: 10px 0 12px;
   font-size: clamp(2.3rem, 5vw, 4.6rem);
   line-height: 0.95;
-}
-
-.marker-glow-Very-High {
-  filter: drop-shadow(0 0 px #d62828);
-}
-
-.marker-glow-High {
-  filter: drop-shadow(0 0 3px #f77f00);
+  background: linear-gradient(135deg, #eff9ff 0%, #72e6ff 50%, #2fb4d6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 30px rgba(114, 230, 255, 0.25));
 }
 
 .hero-copy {
@@ -72,6 +136,45 @@ body {
   color: var(--muted);
 }
 
+/* ─── CONCENTRATION LEGEND BAR ─── */
+.concentration-legend {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 20px 0 28px;
+  height: 6px;
+  border-radius: 999px;
+  overflow: visible;
+  position: relative;
+  width: min(520px, 100%);
+}
+
+.concentration-legend-track {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: 0 0 14px rgba(114, 230, 255, 0.2);
+}
+
+.concentration-legend-track span {
+  flex: 1;
+  transition: flex 0.3s ease;
+}
+
+.concentration-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  width: min(520px, 100%);
+}
+
+/* ─── WORKSPACE ─── */
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
@@ -90,6 +193,31 @@ body {
 
 .map-panel {
   padding: 20px;
+  position: relative;
+}
+
+/* Corner decorations on map panel */
+.map-panel::before,
+.map-panel::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: var(--accent);
+  border-style: solid;
+  opacity: 0.4;
+}
+.map-panel::before {
+  top: 12px;
+  left: 12px;
+  border-width: 2px 0 0 2px;
+  border-radius: 4px 0 0 0;
+}
+.map-panel::after {
+  bottom: 12px;
+  right: 12px;
+  border-width: 0 2px 2px 0;
+  border-radius: 0 0 4px 0;
 }
 
 .panel-card {
@@ -100,6 +228,7 @@ body {
   background: var(--panel-soft);
 }
 
+/* ─── PANEL HEADER ─── */
 .panel-header,
 .legend,
 .coordinate-grid,
@@ -143,16 +272,31 @@ body {
 
 .legend-swatch--sample {
   background: var(--accent-strong);
+  box-shadow: 0 0 8px var(--accent-strong);
 }
 
 .legend-swatch--click {
   background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
 }
 
+/* ─── MAP FRAME ─── */
 .map-frame {
   overflow: hidden;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+}
+
+/* Subtle vignette over map edges */
+.map-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(4, 24, 36, 0.55) 100%);
+  pointer-events: none;
+  z-index: 400;
 }
 
 #mapStage {
@@ -162,6 +306,7 @@ body {
   background: #d7edf5;
 }
 
+/* ─── MAP FOOTNOTE ─── */
 .map-footnote {
   justify-content: space-between;
   gap: 20px;
@@ -176,11 +321,36 @@ body {
   line-height: 1.55;
 }
 
+/* Glowing count badge */
+#datasetCount {
+  color: var(--accent);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.1em;
+  filter: drop-shadow(0 0 6px rgba(114, 230, 255, 0.6));
+}
+
+/* ─── INFO PANEL ─── */
 .info-panel {
   display: grid;
   gap: 18px;
 }
 
+/* Flicker animation on update */
+@keyframes flickerIn {
+  0%   { opacity: 0.2; }
+  15%  { opacity: 0.9; }
+  30%  { opacity: 0.4; }
+  50%  { opacity: 1; }
+  70%  { opacity: 0.7; }
+  85%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+.flicker-update {
+  animation: flickerIn 0.5s ease forwards;
+}
+
+/* ─── COORDINATE GRID ─── */
 .coordinate-grid,
 .report-stats {
   gap: 16px;
@@ -212,13 +382,53 @@ body {
   line-height: 1.45;
 }
 
+/* ─── CONCENTRATION CLASS BADGE ─── */
+#classTextValue {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: background 0.4s, color 0.4s, box-shadow 0.4s;
+}
+
+#classTextValue[data-class="Very High"] {
+  background: rgba(142, 43, 43, 0.3);
+  color: #ff6b6b;
+  box-shadow: 0 0 12px rgba(214, 40, 40, 0.4);
+}
+#classTextValue[data-class="High"] {
+  background: rgba(247, 127, 0, 0.2);
+  color: #f77f00;
+  box-shadow: 0 0 10px rgba(247, 127, 0, 0.35);
+}
+#classTextValue[data-class="Medium"] {
+  background: rgba(255, 209, 102, 0.15);
+  color: #ffd166;
+  box-shadow: 0 0 8px rgba(255, 209, 102, 0.25);
+}
+#classTextValue[data-class="Low"] {
+  background: rgba(128, 237, 153, 0.12);
+  color: #80ed99;
+}
+#classTextValue[data-class="Very Low"] {
+  background: rgba(91, 192, 235, 0.12);
+  color: #5bc0eb;
+}
+
+/* ─── STATS CHART ─── */
+.stats-chart-wrapper {
+  position: relative;
+  height: 150px;
+  margin-top: 16px;
+}
+
+/* ─── REPORT SUMMARY & LISTS ─── */
 .report-summary {
   margin: 10px 0 0;
   color: var(--muted);
   line-height: 1.6;
 }
-
-
 
 .stack-list {
   margin: 12px 0 0;
@@ -230,6 +440,7 @@ body {
   line-height: 1.55;
 }
 
+/* ─── CHAT FORM ─── */
 .chat-form {
   display: grid;
   gap: 10px;
@@ -246,23 +457,67 @@ body {
   background: rgba(4, 24, 36, 0.65);
   color: var(--text);
   font: inherit;
+  transition: border-color 0.2s;
+}
+
+.chat-form textarea:focus {
+  outline: none;
+  border-color: rgba(114, 230, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(114, 230, 255, 0.08);
+}
+
+.chat-form select {
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(157, 225, 255, 0.2);
+  background: rgba(4, 24, 36, 0.65);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
 }
 
 .chat-form button {
   justify-self: start;
   border: 0;
   border-radius: 999px;
-  padding: 10px 16px;
+  padding: 10px 20px;
   background: linear-gradient(135deg, #72e6ff 0%, #2fb4d6 100%);
   color: #052032;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 18px rgba(114, 230, 255, 0.3);
+}
+
+.chat-form button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.chat-form button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(114, 230, 255, 0.45);
+}
+
+.chat-form button:hover::after {
+  opacity: 1;
+}
+
+.chat-form button:active {
+  transform: translateY(0);
 }
 
 .chat-form button:disabled {
   opacity: 0.6;
   cursor: wait;
+  transform: none;
 }
 
 .chat-answer {
@@ -276,6 +531,33 @@ body {
   white-space: pre-wrap;
 }
 
+/* ─── PREDICTION FORM ─── */
+.prediction-form {
+  margin-top: 16px;
+}
+
+/* ─── DEPTH DIVIDER ─── */
+.depth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 10px;
+  opacity: 0.4;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.depth-divider::before,
+.depth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+/* ─── LEAFLET OVERRIDES ─── */
 .leaflet-container {
   font: inherit;
 }
@@ -283,13 +565,34 @@ body {
 .leaflet-control-attribution {
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.68rem;
+  background: rgba(4, 24, 36, 0.7) !important;
+  color: var(--muted) !important;
 }
 
+.leaflet-control-zoom a {
+  background: rgba(7, 31, 53, 0.9) !important;
+  color: var(--accent) !important;
+  border-color: rgba(114, 230, 255, 0.2) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: rgba(7, 31, 53, 0.95) !important;
+  color: var(--text) !important;
+  border: 1px solid rgba(114, 230, 255, 0.2) !important;
+  border-radius: 14px !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+}
+
+.leaflet-popup-tip {
+  background: rgba(7, 31, 53, 0.95) !important;
+}
+
+/* ─── RESPONSIVE ─── */
 @media (max-width: 980px) {
   .workspace {
     grid-template-columns: 1fr;
   }
-
   .map-footnote {
     flex-direction: column;
   }
@@ -300,11 +603,20 @@ body {
     width: min(100% - 20px, 1440px);
     padding-top: 20px;
   }
-
   .map-panel,
   .panel-card {
     border-radius: 18px;
   }
+  .map-panel {
+    padding: 14px;
+  }
+  .panel-header {
+    flex-direction: column;
+  }
+  #mapStage {
+    min-height: 420px;
+  }
+}  }
 
   .map-panel {
     padding: 14px;

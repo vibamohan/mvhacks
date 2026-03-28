@@ -1,26 +1,35 @@
-const DATASET_URL = "./data/Marine_Microplastics_WGS84_2855111269302250333.json";
+const DATASET_URL = "./data/Marine_Microplastics_WGS84_4325541212716015555.json";
 
-let locationsPromise;
+let locationsPromise = null;
 
+/**
+ * Converts degrees to radians for spherical geometry
+ */
 function toRadians(value) {
   return (value * Math.PI) / 180;
 }
 
+/**
+ * Calculates the distance between two points in Kilometers
+ */
 function haversineDistanceKm(lat1, lon1, lat2, lon2) {
   const earthRadiusKm = 6371;
   const dLat = toRadians(lat2 - lat1);
   const dLon = toRadians(lon2 - lon1);
+
+  // Using Math.pow instead of ** to avoid SyntaxErrors in older browsers
   const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) ** 2;
+    Math.pow(Math.sin(dLat / 2), 2) +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.pow(Math.sin(dLon / 2), 2);
 
   return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
 }
 
+/**
+ * Formats epoch timestamps into human-readable strings
+ */
 function formatDate(epochMs) {
-  if (!epochMs) {
-    return "Unknown";
-  }
+  if (!epochMs) return "Unknown";
 
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
@@ -30,49 +39,59 @@ function formatDate(epochMs) {
   }).format(new Date(epochMs));
 }
 
-function parseNumericValue(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
+/**
+ * Cleans up raw API data into a standard object format
+ */
 function normalizeFeature(feature) {
-  const attributes = feature.attributes;
-  const directMeasurement = parseNumericValue(attributes.Microplastics_measurement);
-  const fallbackMeasurement = parseNumericValue(attributes.Standardized_Nurdle__Amount);
-  const measurement = directMeasurement ?? fallbackMeasurement;
+  const attributes = feature.attributes || {};
+  const geometry = feature.geometry || {};
+  
+  const rawMeasurement = attributes.Microplastics_measurement;
+  const fallbackMeasurement = attributes.Standardized_Nurdle__Amount;
+
+  // Handle nullish coalescing manually for better compatibility
+  const measurement = (rawMeasurement !== null && rawMeasurement !== undefined)
+    ? rawMeasurement
+    : (fallbackMeasurement !== null && fallbackMeasurement !== undefined && fallbackMeasurement !== ""
+      ? Number(fallbackMeasurement)
+      : null);
 
   return {
     id: attributes.OBJECTID,
-    latitude: attributes.Latitude__degree_ ?? feature.geometry.y,
-    longitude: attributes.Longitude_degree_ ?? feature.geometry.x,
+    latitude: attributes.Latitude__degree_ !== undefined ? attributes.Latitude__degree_ : geometry.y,
+    longitude: attributes.Longitude_degree_ !== undefined ? attributes.Longitude_degree_ : geometry.x,
     ocean: attributes.Location_Oceans || "Unknown",
     region: attributes.Location_Regions || "Unknown",
     subRegion: attributes.Location_SubRegions || "Unknown",
     medium: attributes.Medium || "Unknown",
-    measurement,
-    measurementLabel: measurement === null ? "Unavailable" : String(measurement),
+    measurement: measurement,
+    // Fix: Added measurementLabel specifically for app.js popup logic
+    measurementLabel: measurement !== null ? measurement : "N/A",
     unit: attributes.Unit || "",
     concentrationClassText: attributes.Concentration_class_text || "Unknown",
     dateLabel: formatDate(attributes.Date_m_d_yyyy),
-    rawDate: attributes.Date_m_d_yyyy ?? null,
-    measurementSource:
-      directMeasurement !== null ? "Microplastics_measurement" : "Standardized_Nurdle__Amount",
+    rawDate: attributes.Date_m_d_yyyy || null,
+    measurementSource: (rawMeasurement !== null && rawMeasurement !== undefined)
+      ? "Microplastics_measurement"
+      : "Standardized_Nurdle__Amount",
   };
 }
 
+/**
+ * Formats coordinates for the UI (e.g., 12.34° N)
+ */
 export function formatCoordinate(value, axis) {
+  if (value === undefined || value === null) return "--";
   const absolute = Math.abs(value).toFixed(2);
   if (axis === "lat") {
     return `${absolute}° ${value >= 0 ? "N" : "S"}`;
   }
-
   return `${absolute}° ${value >= 0 ? "E" : "W"}`;
 }
 
+/**
+ * Fetches and caches the global microplastics dataset
+ */
 export async function fetchMicroplasticsLocations() {
   if (!locationsPromise) {
     locationsPromise = fetch(DATASET_URL)
@@ -80,32 +99,48 @@ export async function fetchMicroplasticsLocations() {
         if (!response.ok) {
           throw new Error(`Unable to load dataset: ${response.status}`);
         }
-
         return response.json();
       })
-      .then((payload) => payload.layers[0].features.map(normalizeFeature));
+      .then((payload) => {
+        // Navigate the nested JSON structure safely
+        const features = (payload.layers && payload.layers[0] && payload.layers[0].features) || [];
+        return features.map(normalizeFeature);
+      })
+      .catch(err => {
+        locationsPromise = null; // Reset cache so user can retry
+        throw err;
+      });
   }
-
   return locationsPromise;
 }
 
+/**
+ * Finds the single closest report to a given lat/lng
+ */
 export async function fetchNearestMicroplasticsReport(latitude, longitude) {
   const locations = await fetchMicroplasticsLocations();
-  return locations
-    .map((location) => ({
-      ...location,
-      distanceKm: haversineDistanceKm(latitude, longitude, location.latitude, location.longitude),
-    }))
-    .sort((left, right) => left.distanceKm - right.distanceKm)[0];
+  if (!locations || locations.length === 0) return null;
+
+  // Efficient O(n) search instead of sorting the whole array
+  return locations.reduce((nearest, current) => {
+    const distance = haversineDistanceKm(latitude, longitude, current.latitude, current.longitude);
+    if (!nearest || distance < nearest.distanceKm) {
+      return { ...current, distanceKm: distance };
+    }
+    return nearest;
+  }, null);
 }
 
-export async function fetchNearbyMicroplasticsReports(latitude, longitude, limit = 25) {
+/**
+ * Finds a list of the X nearest reports
+ */
+export async function fetchNearbyMicroplasticsReports(latitude, longitude, count = 25) {
   const locations = await fetchMicroplasticsLocations();
   return locations
     .map((location) => ({
       ...location,
       distanceKm: haversineDistanceKm(latitude, longitude, location.latitude, location.longitude),
     }))
-    .sort((left, right) => left.distanceKm - right.distanceKm)
-    .slice(0, limit);
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .slice(0, count);
 }

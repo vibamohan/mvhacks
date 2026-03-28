@@ -9,14 +9,14 @@ const __dirname = path.dirname(__filename);
 const DATASET_PATH = path.join(
   __dirname,
   "data",
-  "Marine_Microplastics_WGS84_2855111269302250333.json"
+  "Marine_Microplastics_WGS84_4325541212716015555.json"
 );
 const PORT = Number(process.env.PORT || 8000);
 const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN;
 const API_BASE_URL =
   process.env.API_BASE_URL || "https://router.huggingface.co/v1";
 const CHAT_MODEL =
-  process.env.CHAT_MODEL || "meta-llama/Llama-3.1-70B-Instruct";
+  process.env.CHAT_MODEL || "meta-llama/Llama-3.1-8B-Instruct:fastest";
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -103,6 +103,21 @@ function selectRelevantRows(question, nearestSample, nearbySamples, dataset) {
   return [...byId.values()].slice(0, 20);
 }
 
+function groupYears(rows) {
+  const counts = new Map();
+  for (const row of rows) {
+    const sourceDate = row.rawDate ?? row.date;
+    if (!sourceDate) continue;
+    const year = new Date(sourceDate).getUTCFullYear();
+    if (Number.isFinite(year)) {
+      counts.set(year, (counts.get(year) || 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map(([year, count]) => ({ year, count }));
+}
+
 async function handleChat(request, response) {
   if (!HUGGINGFACE_API_KEY) {
     sendJson(response, 500, {
@@ -173,8 +188,12 @@ Explain why the observed phenomenon may be occurring in this area, based only on
 
     const result = await modelResponse.json();
     if (!modelResponse.ok) {
+      const providerMessage = result.error?.message || result.error || "Hugging Face request failed.";
       sendJson(response, modelResponse.status, {
-        error: result.error?.message || result.error || "Hugging Face request failed.",
+        error:
+          providerMessage.includes("expected pattern")
+            ? `${providerMessage} Try a CHAT_MODEL value like "meta-llama/Llama-3.1-8B-Instruct:fastest".`
+            : providerMessage,
         provider: "huggingface",
       });
       return;
@@ -192,6 +211,106 @@ Explain why the observed phenomenon may be occurring in this area, based only on
     });
   }
 }
+
+async function handlePrediction(request, response) {
+  if (!HUGGINGFACE_API_KEY) {
+    sendJson(response, 500, {
+      error: "Set HUGGINGFACE_API_KEY or HF_TOKEN before starting the server.",
+      provider: "huggingface",
+    });
+    return;
+  }
+
+  let body = "";
+  for await (const chunk of request) {
+    body += chunk;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    sendJson(response, 400, { error: "Invalid JSON body.", provider: "huggingface" });
+    return;
+  }
+
+  const { years, selectedPoint, nearestSample, nearbySamples } = payload;
+  const horizonYears = Number(years);
+  if (![1, 5, 10].includes(horizonYears)) {
+    sendJson(response, 400, { error: "Prediction horizon must be 1, 5, or 10 years.", provider: "huggingface" });
+    return;
+  }
+
+  const yearlyCoverage = groupYears(nearbySamples || []);
+
+  try {
+    const modelResponse = await fetch(`${API_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: CHAT_MODEL,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You create cautious, plausible scenario estimates for marine microplastics. Use only the provided rows and clearly signal uncertainty. If time coverage is thin, say so and make a light qualitative estimate instead of a confident forecast.",
+          },
+          {
+            role: "user",
+            content: `Create a ${horizonYears}-year forward-looking estimate for the clicked marine microplastics location.
+
+Selected point:
+${JSON.stringify(selectedPoint, null, 2)}
+
+Nearest sample:
+${JSON.stringify(nearestSample, null, 2)}
+
+Nearby samples:
+${JSON.stringify(nearbySamples, null, 2)}
+
+Observed nearby year coverage:
+${JSON.stringify(yearlyCoverage, null, 2)}
+
+Write a short prediction with:
+1. one sentence describing the likely direction of concentration,
+2. one sentence describing what signals in the nearby rows support that estimate,
+3. one sentence that states uncertainty because this is an estimate, not a measured forecast.
+
+You may infer gently from nearby rows and dates, but do not invent hard numeric trend claims unless the rows support them.`,
+          },
+        ],
+      }),
+    });
+
+    const result = await modelResponse.json();
+    if (!modelResponse.ok) {
+      const providerMessage = result.error?.message || result.error || "Hugging Face request failed.";
+      sendJson(response, modelResponse.status, {
+        error:
+          providerMessage.includes("expected pattern")
+            ? `${providerMessage} Try a CHAT_MODEL value like "meta-llama/Llama-3.1-8B-Instruct:fastest".`
+            : providerMessage,
+        provider: "huggingface",
+      });
+      return;
+    }
+
+    sendJson(response, 200, {
+      answer: result.choices?.[0]?.message?.content || "No response",
+      rowsUsed: nearbySamples?.length || 0,
+      provider: "huggingface",
+    });
+  } catch (error) {
+    sendJson(response, 500, {
+      error: error.message || "Hugging Face request failed.",
+      provider: "huggingface",
+    });
+  }
+}
+
 
 function serveStatic(request, response) {
   const requestPath = request.url === "/" ? "/index.html" : request.url;
@@ -215,6 +334,11 @@ createServer(async (request, response) => {
   try {
     if (request.method === "POST" && request.url === "/api/chat") {
       await handleChat(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && request.url === "/api/predict") {
+      await handlePrediction(request, response);
       return;
     }
 
