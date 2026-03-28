@@ -181,6 +181,10 @@ function renderReport(report) {
     link.textContent = source.label;
     item.appendChild(link);
   });
+
+  if (sources.length === 0) {
+    sourceList.innerHTML = "<li>No source links available for this hotspot yet.</li>";
+  }
 }
 
 function buildZoneColorMap(locations) {
