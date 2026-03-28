@@ -198,6 +198,10 @@ function buildZoneColorMap(locations) {
 async function initMap() {
   const locations = await fetchTrashLocations();
   const zoneColors = buildZoneColorMap(locations);
+  const worldBounds = L.latLngBounds(
+    L.latLng(-85, -180),
+    L.latLng(85, 180)
+  );
 
   datasetCount.textContent = String(locations.length);
 
@@ -205,11 +209,18 @@ async function initMap() {
     worldCopyJump: true,
     minZoom: 2,
     maxZoom: 8,
+    maxBounds: worldBounds,
+    maxBoundsViscosity: 1.0,
   }).setView([18, -30], 2);
 
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
     attribution:
-      '&copy; OpenStreetMap contributors &copy; CARTO',
+      "Tiles &copy; Esri",
+  }).addTo(map);
+
+  L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
+    attribution: "Labels &copy; Esri",
+    pane: "overlayPane",
   }).addTo(map);
 
   const zonesLayer = L.layerGroup().addTo(map);

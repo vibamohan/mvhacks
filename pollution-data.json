@@ -7,4 +7,4 @@
     { "type": "Feature", "properties": { "density": "Low" }, "geometry": { "type": "Point", "coordinates": [-170.0, 40.0] } },
     { "type": "Feature", "properties": { "density": "Medium" }, "geometry": { "type": "Point", "coordinates": [140.0, 20.0] } }
   ]
-}
+} 

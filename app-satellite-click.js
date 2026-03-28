@@ -24,6 +24,7 @@ const satellites = [
 ];
 
 // Draw the demo satellites so the click behavior is visible on the map.
+/*
 satellites.forEach((satellite) => {
     L.marker([satellite.lat, satellite.lon])
         .addTo(map)
@@ -31,7 +32,28 @@ satellites.forEach((satellite) => {
             `<b>${satellite.name}</b><br>Lat: ${satellite.lat.toFixed(4)}<br>Lon: ${satellite.lon.toFixed(4)}`
         );
 });
+*/
+satellites.forEach((satellite) => {
+    const pulseIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ff6b35;
+            box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.6);
+            animation: pulse-ring 2s ease-in-out infinite;
+        "></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+    });
 
+    L.marker([satellite.lat, satellite.lon], { icon: pulseIcon })
+        .addTo(map)
+        .bindPopup(
+            `<b>${satellite.name}</b><br>Lat: ${satellite.lat.toFixed(4)}<br>Lon: ${satellite.lon.toFixed(4)}`
+        );
+});
 // ==========================================
 // 3. DISTANCE + LOOKUP HELPERS
 // ==========================================
