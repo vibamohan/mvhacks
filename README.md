@@ -1,11 +1,11 @@
 # MVHACKS Hackathon Project
 
-The active web app now lives under [`vibacopy`](/Users/vibamohan/coding/hackathon/mvhacks/vibacopy).
+The active web app now lives under [`teamcopy`](/Users/vibamohan/coding/hackathon/mvhacks/teamcopy).
 
 Run it locally with:
 
 ```bash
-cd /Users/vibamohan/coding/hackathon/mvhacks/vibacopy
+cd /Users/vibamohan/coding/hackathon/mvhacks/teamcopy
 python3 -m http.server 8000
 ```
 

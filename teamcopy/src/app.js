@@ -1,130 +1,35 @@
-import { fetchTrashLocations, fetchTrashReport, formatCoordinate } from "./dataService.js";
+import {
+  fetchMicroplasticsLocations,
+  fetchNearestMicroplasticsReport,
+  formatCoordinate,
+} from "./dataService.js";
 
 const mapElement = document.querySelector("#mapStage");
 const latitudeValue = document.querySelector("#latitudeValue");
 const longitudeValue = document.querySelector("#longitudeValue");
 const reportTitle = document.querySelector("#reportTitle");
-const reportSummary = document.querySelector("#reportSummary");
-const zoneValue = document.querySelector("#zoneValue");
-const densityValue = document.querySelector("#densityValue");
-const debrisValue = document.querySelector("#debrisValue");
+const regionValue = document.querySelector("#regionValue");
+const subRegionValue = document.querySelector("#subRegionValue");
+const oceanValue = document.querySelector("#oceanValue");
+const mediumValue = document.querySelector("#mediumValue");
+const measurementValue = document.querySelector("#measurementValue");
+const classTextValue = document.querySelector("#classTextValue");
+const dateValue = document.querySelector("#dateValue");
 const distanceValue = document.querySelector("#distanceValue");
-const animalsValue = document.querySelector("#animalsValue");
-const plasticsList = document.querySelector("#plasticsList");
-const sourceList = document.querySelector("#sourceList");
 const datasetCount = document.querySelector("#datasetCount");
 const statusNote = document.querySelector("#statusNote");
 
-const sourceProfiles = {
-  "Great Pacific Garbage Patch": [
-    {
-      label: "NOAA Marine Debris Program",
-      url: "https://marinedebris.noaa.gov/",
-    },
-    {
-      label: "The Ocean Cleanup research overview",
-      url: "https://theoceancleanup.com/great-pacific-garbage-patch/",
-    },
-  ],
-  "North Atlantic Drift Zone": [
-    {
-      label: "NOAA Marine Debris Program",
-      url: "https://marinedebris.noaa.gov/",
-    },
-    {
-      label: "UNEP plastics overview",
-      url: "https://www.unep.org/interactives/beat-plastic-pollution/",
-    },
-  ],
-  "Indian Ocean Plastic Belt": [
-    {
-      label: "UNEP plastics overview",
-      url: "https://www.unep.org/interactives/beat-plastic-pollution/",
-    },
-    {
-      label: "IUCN marine plastics issue brief",
-      url: "https://www.iucn.org/resources/issues-brief/marine-plastic-pollution",
-    },
-  ],
-  "South Pacific Debris Field": [
-    {
-      label: "NOAA Marine Debris Program",
-      url: "https://marinedebris.noaa.gov/",
-    },
-    {
-      label: "IUCN marine plastics issue brief",
-      url: "https://www.iucn.org/resources/issues-brief/marine-plastic-pollution",
-    },
-  ],
-  "South Atlantic Accumulation Zone": [
-    {
-      label: "UNEP plastics overview",
-      url: "https://www.unep.org/interactives/beat-plastic-pollution/",
-    },
-    {
-      label: "IUCN marine plastics issue brief",
-      url: "https://www.iucn.org/resources/issues-brief/marine-plastic-pollution",
-    },
-  ],
-  "Mediterranean Surface Load": [
-    {
-      label: "UNEP plastics overview",
-      url: "https://www.unep.org/interactives/beat-plastic-pollution/",
-    },
-    {
-      label: "NOAA Marine Debris Program",
-      url: "https://marinedebris.noaa.gov/",
-    },
-  ],
+const concentrationColors = {
+  "Very Low": "#5bc0eb",
+  Low: "#80ed99",
+  Medium: "#ffd166",
+  High: "#f77f00",
+  "Very High": "#d62828",
 };
 
-const impactProfiles = {
-  "Great Pacific Garbage Patch": {
-    plastics: ["Bottle fragments", "Lost fishing nets", "Food wrappers"],
-    animals: "Sea turtles, albatrosses, tuna, and seals can swallow or become trapped in drifting plastic.",
-    plainSummary:
-      "This is a large area where ocean currents keep pulling floating trash into the same region.",
-  },
-  "North Atlantic Drift Zone": {
-    plastics: ["Packaging film", "Bottle caps", "Broken crates"],
-    animals: "Seabirds, whales, and dolphins are exposed to floating fragments and abandoned gear.",
-    plainSummary:
-      "Currents in the Atlantic can keep plastic circling here instead of letting it spread out quickly.",
-  },
-  "Indian Ocean Plastic Belt": {
-    plastics: ["Textile fibers", "Single-use bags", "Foam containers"],
-    animals: "Whale sharks, turtles, reef fish, and seabirds can encounter plastic carried from coastlines.",
-    plainSummary:
-      "Heavy coastal runoff and seasonal currents make this region a repeated pathway for plastic waste.",
-  },
-  "South Pacific Debris Field": {
-    plastics: ["Net fragments", "Foam pieces", "Hard plastic shards"],
-    animals: "Sea birds, turtles, and open-ocean fish can mistake plastic pieces for food.",
-    plainSummary:
-      "This zone is more spread out, but currents still concentrate debris in the wider South Pacific.",
-  },
-  "South Atlantic Accumulation Zone": {
-    plastics: ["Marine rope", "Container fragments", "Plastic pellets"],
-    animals: "Turtles, sharks, and migratory birds can encounter floating debris over long travel routes.",
-    plainSummary:
-      "Plastic gathers here because the surrounding currents slowly recirculate debris back into the area.",
-  },
-  "Mediterranean Surface Load": {
-    plastics: ["Drink bottles", "Food packaging", "Consumer plastic pellets"],
-    animals: "Loggerhead turtles, seabirds, and dolphins are at risk in this busy and enclosed sea.",
-    plainSummary:
-      "Because this sea is enclosed and heavily used, plastic can build up faster than it leaves.",
-  },
-};
-
-const zonePalette = [
-  "#2a9d8f",
-  "#457b9d",
-  "#8ecae6",
-  "#f4a261",
-  "#e76f51",
-  "#ffb703",
-];
+function getMarkerColor(classText) {
+  return concentrationColors[classText] || "#9fc0d4";
+}
 
 function setSelectedCoordinates(latitude, longitude) {
   latitudeValue.textContent = formatCoordinate(latitude, "lat");
@@ -132,129 +37,120 @@ function setSelectedCoordinates(latitude, longitude) {
 }
 
 function setLoadingState() {
-  reportTitle.textContent = "Finding the nearest hotspot...";
-  reportSummary.textContent =
-    "The app is comparing your clicked latitude and longitude against every saved trash hotspot.";
-  zoneValue.textContent = "--";
-  densityValue.textContent = "--";
-  debrisValue.textContent = "--";
+  reportTitle.textContent = "Finding nearest sample...";
+  regionValue.textContent = "--";
+  subRegionValue.textContent = "--";
+  oceanValue.textContent = "--";
+  mediumValue.textContent = "--";
+  measurementValue.textContent = "--";
+  classTextValue.textContent = "--";
+  dateValue.textContent = "--";
   distanceValue.textContent = "--";
-  animalsValue.textContent = "--";
-  plasticsList.innerHTML = "<li>Loading examples...</li>";
-  sourceList.innerHTML = "<li>Loading source links...</li>";
-}
-
-function renderList(container, values, formatter) {
-  container.innerHTML = "";
-  values.forEach((value) => {
-    const item = document.createElement("li");
-    formatter(item, value);
-    container.appendChild(item);
-  });
 }
 
 function renderReport(report) {
-  const profile = impactProfiles[report.name] ?? {
-    plastics: report.primaryDebris.split(",").map((item) => item.trim()),
-    animals: "Marine animals can eat plastic or get tangled in larger pieces.",
-    plainSummary: report.summary,
-  };
-  const sources = sourceProfiles[report.name] ?? [];
-
-  reportTitle.textContent = report.name;
-  reportSummary.textContent = profile.plainSummary;
-  zoneValue.textContent = report.zone;
-  densityValue.textContent = report.concentration;
-  debrisValue.textContent = report.primaryDebris;
-  distanceValue.textContent = `${report.distanceKm.toFixed(0)} km`;
-  animalsValue.textContent = profile.animals;
-
-  renderList(plasticsList, profile.plastics, (item, plastic) => {
-    item.textContent = plastic;
-  });
-
-  renderList(sourceList, sources, (item, source) => {
-    const link = document.createElement("a");
-    link.href = source.url;
-    link.target = "_blank";
-    link.rel = "noreferrer";
-    link.textContent = source.label;
-    item.appendChild(link);
-  });
-
-  if (sources.length === 0) {
-    sourceList.innerHTML = "<li>No source links available for this hotspot yet.</li>";
-  }
-}
-
-function buildZoneColorMap(locations) {
-  const uniqueZones = [...new Set(locations.map((location) => location.zone))];
-  return uniqueZones.reduce((map, zone, index) => {
-    map[zone] = zonePalette[index % zonePalette.length];
-    return map;
-  }, {});
+  reportTitle.textContent = `Sample ${report.id}`;
+  regionValue.textContent = report.region;
+  subRegionValue.textContent = report.subRegion;
+  oceanValue.textContent = report.ocean;
+  mediumValue.textContent = report.medium;
+  measurementValue.textContent = `${report.measurement} ${report.unit}`.trim();
+  classTextValue.textContent = report.concentrationClassText;
+  dateValue.textContent = report.dateLabel;
+  distanceValue.textContent = `${report.distanceKm.toFixed(1)} km`;
 }
 
 async function initMap() {
-  const locations = await fetchTrashLocations();
-  const zoneColors = buildZoneColorMap(locations);
-  const worldBounds = L.latLngBounds(
-    L.latLng(-85, -180),
-    L.latLng(85, 180)
-  );
+  const locations = await fetchMicroplasticsLocations();
+
+  renderGlobalStats(locations);
+  datasetCount.textContent = String(locations.length);
+  const worldBounds = L.latLngBounds(L.latLng(-85, -180), L.latLng(85, 180));
 
   datasetCount.textContent = String(locations.length);
 
+
   const map = L.map(mapElement, {
-    worldCopyJump: true,
+    preferCanvas: true,
+    worldCopyJump: false,
     minZoom: 2,
     maxZoom: 8,
     maxBounds: worldBounds,
     maxBoundsViscosity: 1.0,
   }).setView([18, -30], 2);
 
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
-    attribution:
-      "Tiles &copy; Esri",
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors",
+    noWrap: true,
   }).addTo(map);
 
-  L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
-    attribution: "Labels &copy; Esri",
-    pane: "overlayPane",
-  }).addTo(map);
-
-  const zonesLayer = L.layerGroup().addTo(map);
-  const markersLayer = L.layerGroup().addTo(map);
+  const samplesLayer = L.layerGroup().addTo(map);
 
   locations.forEach((location) => {
-    const zoneColor = zoneColors[location.zone];
-
-    L.circle([location.latitude, location.longitude], {
-      radius: 900000,
-      color: zoneColor,
-      weight: 1.5,
-      fillColor: zoneColor,
-      fillOpacity: 0.12,
-      opacity: 0.8,
-    })
-      .bindTooltip(`${location.zone} overlay`)
-      .addTo(zonesLayer);
-
     L.circleMarker([location.latitude, location.longitude], {
-      radius: 7,
+      radius: 4,
       color: "#ffffff",
-      weight: 1.5,
-      fillColor: "#ff7b00",
-      fillOpacity: 0.95,
+      weight: 0.8,
+      fillColor: getMarkerColor(location.concentrationClassText),
+      fillOpacity: 0.82,
     })
       .bindPopup(
-        `<strong>${location.name}</strong><br>${location.zone}<br>${formatCoordinate(location.latitude, "lat")}, ${formatCoordinate(location.longitude, "lon")}`
+        `<strong>Sample ${location.id}</strong><br>` +
+          `${formatCoordinate(location.latitude, "lat")}, ${formatCoordinate(location.longitude, "lon")}<br>` +
+          `${location.region} / ${location.subRegion}<br>` +
+          `${location.ocean}<br>` +
+          `${location.medium}<br>` +
+          `${location.measurement} ${location.unit}<br>` +
+          `${location.concentrationClassText}<br>` +
+          `${location.dateLabel}`
       )
-      .addTo(markersLayer);
+      .addTo(samplesLayer);
   });
 
+
+function renderGlobalStats(locations) {
+  const ctx = document.getElementById('statsChart').getContext('2d');
+  
+  // Count occurrences of each class
+  const stats = {
+    "Very Low": 0, "Low": 0, "Medium": 0, "High": 0, "Very High": 0
+  };
+
+  locations.forEach(loc => {
+    if (stats.hasOwnProperty(loc.concentrationClassText)) {
+      stats[loc.concentrationClassText]++;
+    }
+  });
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(stats),
+      datasets: [{
+        data: Object.values(stats),
+        backgroundColor: ["#5bc0eb", "#80ed99", "#ffd166", "#f77f00", "#d62828"],
+        borderRadius: 4
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { 
+          beginAtZero: true, 
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: '#9fc0d4', font: { family: 'IBM Plex Mono', size: 10 } }
+        },
+        x: { 
+          grid: { display: false },
+          ticks: { color: '#9fc0d4', font: { family: 'IBM Plex Mono', size: 9 } }
+        }
+      }
+    }
+  });
+}
   const clickMarker = L.circleMarker([0, 0], {
-    radius: 8,
+    radius: 7,
     color: "#07243b",
     weight: 2,
     fillColor: "#72e6ff",
@@ -265,44 +161,47 @@ async function initMap() {
     const { lat, lng } = event.latlng;
     setSelectedCoordinates(lat, lng);
     setLoadingState();
-
     clickMarker.setLatLng([lat, lng]).addTo(map);
 
     try {
-      const report = await fetchTrashReport(lat, lng);
+      const report = await fetchNearestMicroplasticsReport(lat, lng);
       renderReport(report);
 
       L.popup()
         .setLatLng([lat, lng])
         .setContent(
-          `<strong>Clicked point</strong><br>${formatCoordinate(lat, "lat")}, ${formatCoordinate(lng, "lon")}<br><br><strong>Nearest hotspot</strong><br>${report.name}`
+          `<strong>Clicked point</strong><br>${formatCoordinate(lat, "lat")}, ${formatCoordinate(lng, "lon")}<br><br>` +
+            `<strong>Nearest sample</strong><br>Sample ${report.id}<br>${report.distanceKm.toFixed(1)} km away`
         )
         .openOn(map);
 
       statusNote.textContent =
-        "Coordinates now come directly from the map click, and every hotspot is shown on the map.";
+        "Map ready. Every dot is a microplastics sample from the marine dataset. Click anywhere to find the nearest one.";
     } catch (error) {
       reportTitle.textContent = "Lookup failed";
-      reportSummary.textContent =
-        "The hotspot dataset could not be loaded. Run this folder from a local web server and try again.";
-      zoneValue.textContent = "--";
-      densityValue.textContent = "--";
-      debrisValue.textContent = "--";
+      regionValue.textContent = "--";
+      subRegionValue.textContent = "--";
+      oceanValue.textContent = "--";
+      mediumValue.textContent = "--";
+      measurementValue.textContent = "--";
+      classTextValue.textContent = "--";
+      dateValue.textContent = "--";
       distanceValue.textContent = "--";
-      animalsValue.textContent = "--";
-      plasticsList.innerHTML = "<li>Dataset unavailable.</li>";
-      sourceList.innerHTML = "<li>Dataset unavailable.</li>";
+      statusNote.textContent =
+        "The marine microplastics dataset could not be loaded. Run this folder from a local web server and try again.";
       console.error(error);
     }
   });
 
   statusNote.textContent =
-    "Map ready. Click anywhere to see the exact latitude and longitude and the nearest trash hotspot.";
+    "Map ready. Every dot is a microplastics sample from the marine dataset. Click anywhere to find the nearest one.";
 }
+
+
 
 initMap().catch((error) => {
   reportTitle.textContent = "Map failed to load";
-  reportSummary.textContent =
+  statusNote.textContent =
     "The interactive map could not start. Check the console and make sure the page is being served locally.";
   console.error(error);
 });

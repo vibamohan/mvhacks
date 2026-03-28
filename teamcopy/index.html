@@ -58,19 +58,28 @@
         </section>
 
         <aside class="info-panel">
-          <div class="panel-card">
-            <p class="panel-label">Selected Point</p>
-            <div class="coordinate-grid">
-              <div>
-                <span class="metric-label">Latitude</span>
-                <strong id="latitudeValue">--</strong>
-              </div>
-              <div>
-                <span class="metric-label">Longitude</span>
-                <strong id="longitudeValue">--</strong>
-              </div>
-            </div>
-          </div>
+  <div class="panel-card">
+    <p class="panel-label">Selected Point</p>
+    <div class="coordinate-grid">
+      <div>
+        <span class="metric-label">Latitude</span>
+        <strong id="latitudeValue">--</strong>
+      </div>
+      <div>
+        <span class="metric-label">Longitude</span>
+        <strong id="longitudeValue">--</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-card">
+    <p class="panel-label">Global Distribution</p>
+    <div style="margin-top: 15px; height: 200px;">
+      <canvas id="statsChart"></canvas>
+    </div>
+  </div>
+
+  </aside>
 
           <div class="panel-card">
             <p class="panel-label">Nearest Hotspot</p>
@@ -122,12 +131,13 @@
         </aside>
       </main>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
+
     <script type="module" src="./src/app.js"></script>
-  </body>
 </html>

@@ -1,4 +1,6 @@
-const DATASET_URL = "./data/trash-hotspots.json";
+const DATASET_URL = "./data/Marine_Microplastics_WGS84_2855111269302250333.json";
+
+let locationsPromise;
 
 function toRadians(value) {
   return (value * Math.PI) / 180;
@@ -15,6 +17,47 @@ function haversineDistanceKm(lat1, lon1, lat2, lon2) {
   return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
 }
 
+function formatDate(epochMs) {
+  if (!epochMs) {
+    return "Unknown";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(epochMs));
+}
+
+function normalizeFeature(feature) {
+  const attributes = feature.attributes;
+  const rawMeasurement = attributes.Microplastics_measurement;
+  const fallbackMeasurement = attributes.Standardized_Nurdle__Amount;
+  const measurement =
+    rawMeasurement ?? (fallbackMeasurement !== null && fallbackMeasurement !== undefined && fallbackMeasurement !== ""
+      ? Number(fallbackMeasurement)
+      : null);
+
+  return {
+    id: attributes.OBJECTID,
+    latitude: attributes.Latitude__degree_ ?? feature.geometry.y,
+    longitude: attributes.Longitude_degree_ ?? feature.geometry.x,
+    ocean: attributes.Location_Oceans || "Unknown",
+    region: attributes.Location_Regions || "Unknown",
+    subRegion: attributes.Location_SubRegions || "Unknown",
+    medium: attributes.Medium || "Unknown",
+    measurement,
+    unit: attributes.Unit || "",
+    concentrationClassText: attributes.Concentration_class_text || "Unknown",
+    dateLabel: formatDate(attributes.Date_m_d_yyyy),
+    rawDate: attributes.Date_m_d_yyyy ?? null,
+    measurementSource: rawMeasurement !== null && rawMeasurement !== undefined
+      ? "Microplastics_measurement"
+      : "Standardized_Nurdle__Amount",
+  };
+}
+
 export function formatCoordinate(value, axis) {
   const absolute = Math.abs(value).toFixed(2);
   if (axis === "lat") {
@@ -24,31 +67,28 @@ export function formatCoordinate(value, axis) {
   return `${absolute}° ${value >= 0 ? "E" : "W"}`;
 }
 
-export function projectCoordinatesToPercent(latitude, longitude) {
-  return {
-    xPercent: ((longitude + 180) / 360) * 100,
-    yPercent: ((90 - latitude) / 180) * 100,
-  };
+export async function fetchMicroplasticsLocations() {
+  if (!locationsPromise) {
+    locationsPromise = fetch(DATASET_URL)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Unable to load dataset: ${response.status}`);
+        }
+
+        return response.json();
+      })
+      .then((payload) => payload.layers[0].features.map(normalizeFeature));
+  }
+
+  return locationsPromise;
 }
 
-export async function fetchTrashReport(latitude, longitude) {
-  const locations = await fetchTrashLocations();
-  const nearest = locations
+export async function fetchNearestMicroplasticsReport(latitude, longitude) {
+  const locations = await fetchMicroplasticsLocations();
+  return locations
     .map((location) => ({
       ...location,
       distanceKm: haversineDistanceKm(latitude, longitude, location.latitude, location.longitude),
     }))
     .sort((left, right) => left.distanceKm - right.distanceKm)[0];
-
-  return nearest;
-}
-
-export async function fetchTrashLocations() {
-  const response = await fetch(DATASET_URL);
-  if (!response.ok) {
-    throw new Error(`Unable to load dataset: ${response.status}`);
-  }
-
-  const payload = await response.json();
-  return payload.locations;
 }
