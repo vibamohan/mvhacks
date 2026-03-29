@@ -12,6 +12,7 @@
 
 * {
   box-sizing: border-box;
+  
 }
 
 body {
@@ -24,7 +25,12 @@ body {
     linear-gradient(180deg, #03101a 0%, #08263c 100%);
   color: var(--text);
   overflow-x: hidden;
+  cursor: url("./dolphin.png") 16 16, auto !important;
 }
+.panel-card:hover{
+  cursor: url("./teamcopydolphin.png") 16 16, auto !important;
+}
+
 
 /* ─── ANIMATED BACKGROUND CANVAS ─── */
 #bgCanvas {

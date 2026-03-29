@@ -196,8 +196,8 @@ async function handleChat(request, response) {
         messages: [
           {
             role: "system",
-            content:
-              "You explain marine microplastics patterns using only the provided dataset context. Be concise, call out uncertainty, and do not invent causes not supported by the data.",
+            content: 
+              "Explain marine microplastics using the given dataset. Use your previous knowledge about the area and causes of marine microplastics as well. Display the information in a clear and concise manner.  Call out uncertainty, and do not invent causes not supported by the data. Make the information easy for the user to understand, don't over explain."
           },
           {
             role: "user",
@@ -215,7 +215,7 @@ ${JSON.stringify(nearbySamples, null, 2)}
 Additional relevant dataset rows:
 ${JSON.stringify(relevantRows, null, 2)}
 
-Explain why the observed phenomenon may be occurring in this area, based only on the provided rows. Mention region, ocean, medium, concentration class, measurement, and date when useful.`,
+Explain why the observed phenomenon may be occurring in this area, based only on the provided rows and your previous knowledge. Mention region, ocean, medium, concentration class, measurement, and date when useful. Make the information clear and concise, easy to understand. Do not overexplain.`,
           },
         ],
       }),
@@ -291,7 +291,7 @@ async function handlePrediction(request, response) {
           {
             role: "system",
             content:
-              "You create cautious, plausible scenario estimates for marine microplastics. Use only the provided rows and clearly signal uncertainty. If time coverage is thin, say so and make a light qualitative estimate instead of a confident forecast.",
+              "You create cautious, plausible scenario estimates for marine microplastics. Use only the provided rows and previous knowledge about the ocean and pollution. clearly signal uncertainty. If time coverage is thin, say so and make a light qualitative estimate instead of a confident forecast.",
           },
           {
             role: "user",
@@ -391,7 +391,7 @@ async function handleActions(request, response) {
           {
             role: "system",
             content:
-              "You suggest practical environmental response steps using current local status and historical nearby sample rows. Keep the answer actionable, concise, grounded in the provided evidence, and organized into exactly two sections only: 'What common people can do' and 'What larger efforts can do'.",
+              "You suggest practical environmental response steps using current local status and historical nearby sample rows. Keep the answer actionable, concise, grounded in the provided evidence, and organized into exactly two sections only: 'What common people can do' and 'What larger efforts can do'. Try not to make it too generic and instead tailor it to the levels there.",
           },
           {
             role: "user",
