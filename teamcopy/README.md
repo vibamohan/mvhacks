@@ -1,38 +1,33 @@
-# Ocean Trash Locator
+# Marine Microplastics Map
 
-Static prototype for a click-to-coordinate ocean map.
+Interactive map for exploring marine microplastics samples, nearby pattern summaries, predictions, and model-generated explanations.
 
-## What it does
+## Local development
 
-- Displays a clickable world map
-- Converts the click position into latitude and longitude
-- Queries a local JSON dataset for the nearest trash hotspot
-- Renders the selected point and the matched dataset point on the map
-- Shows the returned report in the side panel
-
-## Run it locally
-
-Because the app fetches JSON, serve the directory over HTTP instead of opening `index.html` directly.
+Run the local Node server:
 
 ```bash
-cd /Users/vibamohan/coding/hackathon/mvhacks/vibacopy
-python3 -m http.server 8000
+cd /Users/vibamohan/coding/hackathon/mvhacks/teamcopy
+HUGGINGFACE_API_KEY="your_token_here" node server.mjs
 ```
 
 Then open `http://localhost:8000`.
 
-## Swap JSON for an API
+## Deploy to Vercel
 
-Replace `fetchTrashReport()` in [src/dataService.js](/Users/vibamohan/coding/hackathon/mvhacks/vibacopy/src/dataService.js) with an API request that accepts latitude and longitude and returns:
+This project is now structured to work on Vercel without the long-running `server.mjs` process.
 
-```json
-{
-  "name": "Location title",
-  "zone": "Ocean region",
-  "latitude": 0,
-  "longitude": 0,
-  "concentration": "High",
-  "primaryDebris": "Microplastics",
-  "summary": "Short description"
-}
-```
+Use these settings in Vercel:
+
+1. Import the repo.
+2. Set the project root directory to `teamcopy`.
+3. Add environment variable `HUGGINGFACE_API_KEY`.
+4. Deploy.
+
+The frontend remains static, and these Vercel serverless routes handle the model requests:
+
+- `api/chat.mjs`
+- `api/predict.mjs`
+- `api/actions.mjs`
+
+The frontend already calls `/api/chat`, `/api/predict`, and `/api/actions`, so no client-side URL changes are needed.

@@ -28,7 +28,7 @@ body {
   cursor: url("./custom-cursor.png") 16 16, auto;
 }
 .panel-card:hover{
-  cursor: url("./custom-cursor.png") 16 16;
+  cursor: url("./custom-cursor.png") 16 16, auto;
 }
 
 
