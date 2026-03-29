@@ -18,8 +18,9 @@
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
-
+  <body onclick = "playSound()">
+    <!-- Load Bubbles Sound Effect -->
+    <audio id="bubbleSound" preload = "auto" src = "./bubbles.mp3"></audio>
     <!-- Animated particle/wave background -->
     <canvas id="bgCanvas"></canvas>
 
@@ -203,8 +204,21 @@
           </div>
         </section>
       </section>
-    </div>
 
+    </div>
+    <div class="footer-banner">
+      <img
+        src="./bottom-header.jpg"
+        alt="Marine pollution footer image"
+        class="footer-banner-image"
+      />
+    </div>
+    <script>
+      const bubblesSound = document.getElementById("bubbleSound");
+      function playSound(){
+        bubblesSound.play();
+      }
+    </script>
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

@@ -535,6 +535,10 @@ async function initMap() {
     "Map ready. Every dot is a microplastics sample from the dataset. Click anywhere to inspect the nearest one.";
 }
 
+window.addEventListener ("load", () => {
+  document.body.classList.add("loaded");
+});
+
 initMap().catch((error) => {
   reportTitle.textContent = "Map failed to load";
   statusNote.textContent =
