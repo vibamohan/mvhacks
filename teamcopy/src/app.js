@@ -248,6 +248,48 @@ function renderPredictions(report, nearbyReports) {
   });
 }
 
+async function updateSelectedLocation(map, clickMarker, latitude, longitude, explicitReport) {
+  setSelectedCoordinates(latitude, longitude);
+  resetReport();
+  resetPredictions();
+  clickMarker.setLatLng([latitude, longitude]).addTo(map);
+
+  const [nearestLookupReport, nearbyReports] = await Promise.all([
+    explicitReport ? Promise.resolve(explicitReport) : fetchNearestMicroplasticsReport(latitude, longitude),
+    fetchNearbyMicroplasticsReports(latitude, longitude, 25),
+  ]);
+
+  const nearestReport = explicitReport
+    ? { ...nearestLookupReport, distanceKm: explicitReport.distanceKm ?? 0 }
+    : nearestLookupReport;
+
+  if (!nearestReport) {
+    throw new Error("No nearest sample was found for this selected point.");
+  }
+
+  renderReport(nearestReport);
+  renderPredictions(nearestReport, nearbyReports);
+  selectedContext = {
+    selectedPoint: { latitude, longitude },
+    nearestSample: nearestReport,
+    nearbySamples: nearbyReports,
+  };
+
+  L.popup()
+    .setLatLng([latitude, longitude])
+    .setContent(
+      `<strong>Selected point</strong><br>${formatCoordinate(latitude, "lat")}, ${formatCoordinate(longitude, "lon")}<br><br>` +
+        `<strong>Nearest sample</strong><br>Sample ${nearestReport.id}<br>${nearestReport.distanceKm.toFixed(1)} km away`
+    )
+    .openOn(map);
+
+  chatStatus.textContent =
+    "The chatbot will use the selected point, the nearest sample, and 25 nearby rows from the dataset.";
+  chatAnswer.textContent = "Ask a question about why this area may show the pattern you see.";
+  statusNote.textContent =
+    "Map ready. Every dot is a microplastics sample from the dataset. Click anywhere to inspect the nearest one.";
+}
+
 async function handleChatSubmit(event) {
   event.preventDefault();
 
@@ -423,13 +465,15 @@ async function initMap() {
   const samplesLayer = L.layerGroup().addTo(map);
 
   locations.forEach((location) => {
-    L.circleMarker([location.latitude, location.longitude], {
+    const marker = L.circleMarker([location.latitude, location.longitude], {
       radius: 4,
       color: "#ffffff",
       weight: 0.8,
       fillColor: getMarkerColor(location.concentrationClassText),
       fillOpacity: 0.82,
-    })
+    });
+
+    marker
       .bindPopup(
         `<strong>Sample ${location.id}</strong><br>` +
           `${formatCoordinate(location.latitude, "lat")}, ${formatCoordinate(location.longitude, "lon")}<br>` +
@@ -440,6 +484,22 @@ async function initMap() {
           `${location.dateLabel}`
       )
       .addTo(samplesLayer);
+
+    marker.on("click", async () => {
+      try {
+        await updateSelectedLocation(map, clickMarker, location.latitude, location.longitude, {
+          ...location,
+          distanceKm: 0,
+        });
+      } catch (error) {
+        resetReport();
+        resetPredictions();
+        reportTitle.textContent = "Nearest sample lookup failed";
+        statusNote.textContent =
+          "The selected sample could not be loaded into the panel. Check the console and try another point.";
+        console.error(error);
+      }
+    });
   });
 
   const clickMarker = L.circleMarker([0, 0], {
@@ -455,42 +515,8 @@ async function initMap() {
 
   map.on("click", async (event) => {
     const { lat, lng } = event.latlng;
-    setSelectedCoordinates(lat, lng);
-    resetReport();
-    resetPredictions();
-    clickMarker.setLatLng([lat, lng]).addTo(map);
-
     try {
-      const [nearestReport, nearbyReports] = await Promise.all([
-        fetchNearestMicroplasticsReport(lat, lng),
-        fetchNearbyMicroplasticsReports(lat, lng, 25),
-      ]);
-
-      if (!nearestReport) {
-        throw new Error("No nearest sample was found for this clicked point.");
-      }
-
-      renderReport(nearestReport);
-      renderPredictions(nearestReport, nearbyReports);
-      selectedContext = {
-        selectedPoint: { latitude: lat, longitude: lng },
-        nearestSample: nearestReport,
-        nearbySamples: nearbyReports,
-      };
-
-      L.popup()
-        .setLatLng([lat, lng])
-        .setContent(
-          `<strong>Clicked point</strong><br>${formatCoordinate(lat, "lat")}, ${formatCoordinate(lng, "lon")}<br><br>` +
-            `<strong>Nearest sample</strong><br>Sample ${nearestReport.id}<br>${nearestReport.distanceKm.toFixed(1)} km away`
-        )
-        .openOn(map);
-
-      chatStatus.textContent =
-        "The chatbot will use the selected point, the nearest sample, and 25 nearby rows from the dataset.";
-      chatAnswer.textContent = "Ask a question about why this area may show the pattern you see.";
-      statusNote.textContent =
-        "Map ready. Every dot is a microplastics sample from the dataset. Click anywhere to inspect the nearest one.";
+      await updateSelectedLocation(map, clickMarker, lat, lng);
     } catch (error) {
       resetReport();
       resetPredictions();
