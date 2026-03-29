@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marine Microplastics Map</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body onclick = "playSound()">
+    <!-- Load Bubbles Sound Effect -->
+    <audio id="bubbleSound" preload = "auto" src = "./bubbles.mp3"></audio>
+    <!-- Animated particle/wave background -->
+    <canvas id="bgCanvas"></canvas>
+
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-image-container">
+          <img
+            src="./hero-impact.png"
+            alt="Marine animals affected by plastic pollution"
+            class="hero-image"
+          />
+        </div>
+        <div class="hero-content">
+          <p class="eyebrow">Interactive Dataset Viewer</p>
+          <h1>Marine Microplastics Map</h1>
+          <p class="hero-copy">
+            Click the map to inspect the nearest marine microplastics sample, see a local prediction
+            summary based on nearby rows, and ask a chatbot to explain what may be happening in that area.
+          </p>
+
+          <!-- Concentration gradient legend bar -->
+          <div class="concentration-legend">
+            <div class="concentration-legend-track">
+              <span style="background:#5bc0eb"></span>
+              <span style="background:#80ed99"></span>
+              <span style="background:#ffd166"></span>
+              <span style="background:#f77f00"></span>
+              <span style="background:#8e2b2b"></span>
+            </div>
+          </div>
+          <div class="concentration-legend-labels">
+            <span>Very Low</span>
+            <span>Low</span>
+            <span>Medium</span>
+            <span>High</span>
+            <span>Very High</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="map-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-label">Dataset Map</p>
+              <h2>Global Marine Microplastics Samples</h2>
+            </div>
+
+
+          </div>
+
+          <div class="map-frame">
+            <div id="mapStage" aria-label="Interactive marine microplastics map"></div>
+          </div>
+
+          <div class="map-footnote">
+            <p>
+              <strong id="datasetCount">0</strong> marine microplastics samples are loaded on the map.
+            </p>
+            <p id="statusNote">Map is loading.</p>
+          </div>
+        </section>
+
+        <aside class="info-panel">
+          <section class="panel-card">
+            <p class="panel-label">Selected Point</p>
+            <div class="coordinate-grid">
+              <div>
+                <span class="metric-label">Latitude</span>
+                <strong id="latitudeValue">--</strong>
+              </div>
+              <div>
+                <span class="metric-label">Longitude</span>
+                <strong id="longitudeValue">--</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <p class="panel-label">Nearest Sample</p>
+            <h3 id="reportTitle">Click the map to inspect a sample</h3>
+            <div class="depth-divider">sample data</div>
+            <dl class="report-stats">
+              <div>
+                <dt>Ocean</dt>
+                <dd id="oceanValue">--</dd>
+              </div>
+              <div>
+                <dt>Medium</dt>
+                <dd id="mediumValue">--</dd>
+              </div>
+              <div>
+                <dt>Measurement</dt>
+                <dd id="measurementValue">--</dd>
+              </div>
+              <div>
+                <dt>Class</dt>
+                <dd><span id="classTextValue">--</span></dd>
+              </div>
+              <div>
+                <dt>Date</dt>
+                <dd id="dateValue">--</dd>
+              </div>
+              <div>
+                <dt>Distance</dt>
+                <dd id="distanceValue">--</dd>
+              </div>
+            </dl>
+          </section>
+
+          <!-- Global stats chart card -->
+          <section class="panel-card">
+            <p class="panel-label">Global Distribution</p>
+            <h3>Concentration class breakdown</h3>
+            <div class="stats-chart-wrapper">
+              <canvas id="statsChart"></canvas>
+            </div>
+          </section>
+
+        </aside>
+      </main>
+
+      <section class="widget-row widget-row--below-map">
+        <section class="panel-card">
+          <p class="panel-label">Predictions</p>
+          <h3>Local pattern summary</h3>
+          <p id="predictionSummary" class="report-summary">
+            Click the map to estimate what nearby samples suggest about concentration patterns.
+          </p>
+          <ul id="predictionBullets" class="stack-list">
+            <li>Nearby rows will be summarized here.</li>
+          </ul>
+          <form id="predictionForm" class="chat-form prediction-form">
+            <label class="metric-label" for="predictionHorizon">Prediction horizon</label>
+            <select id="predictionHorizon" name="years">
+              <option value="1">1 year from now</option>
+              <option value="5" selected>5 years from now</option>
+              <option value="10">10 years from now</option>
+            </select>
+            <button type="submit" id="predictionSubmit">Generate prediction</button>
+          </form>
+          <p id="predictionStatus" class="report-summary">
+            Predictions use nearby samples and let the model estimate a plausible future scenario.
+          </p>
+          <div id="predictionAnswer" class="chat-answer">
+            Choose a point on the map, then generate a prediction.
+          </div>
+        </section>
+
+        <section class="panel-card panel-card--muted">
+          <p class="panel-label">Ask the Dataset</p>
+          <form id="chatForm" class="chat-form">
+            <label class="metric-label" for="chatInput">Question</label>
+            <textarea
+              id="chatInput"
+              name="question"
+              rows="4"
+              placeholder="Why might this area have a high concentration class?"
+            ></textarea>
+            <button type="submit" id="chatSubmit">Ask</button>
+          </form>
+          <p id="chatStatus" class="report-summary">
+            The chatbot uses the current clicked location and nearby dataset rows as context.
+          </p>
+          <div id="chatAnswer" class="chat-answer">
+            Ask a question after selecting a point on the map.
+          </div>
+        </section>
+
+        <section class="panel-card">
+          <p class="panel-label">Response Steps</p>
+          <h3>Potential solutions at this location</h3>
+          <form id="actionsForm" class="chat-form">
+            <button type="submit" id="actionsSubmit">Generate action steps</button>
+          </form>
+          <p id="actionsStatus" class="report-summary">
+            This suggests actions using the selected location, nearby severity, and local context.
+          </p>
+          <div id="actionsAnswer" class="chat-answer">
+            Click a point on the map, then generate action steps.
+          </div>
+        </section>
+      </section>
+
+    </div>
+    <div class="footer-banner">
+      <img
+        src="./bottom-header.jpg"
+        alt="Marine pollution footer image"
+        class="footer-banner-image"
+      />
+    </div>
+    <script>
+      const bubblesSound = document.getElementById("bubbleSound");
+      function playSound(){
+        bubblesSound.play();
+      }
+    </script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Background wave/particle animation -->
+    <script>
+      (function () {
+        const canvas = document.getElementById("bgCanvas");
+        const ctx = canvas.getContext("2d");
+        let W, H, particles;
+
+        function resize() {
+          W = canvas.width = window.innerWidth;
+          H = canvas.height = window.innerHeight;
+        }
+
+        function initParticles() {
+          particles = Array.from({ length: 55 }, () => ({
+            x: Math.random() * W,
+            y: Math.random() * H,
+            r: Math.random() * 1.4 + 0.3,
+            vx: (Math.random() - 0.5) * 0.18,
+            vy: (Math.random() - 0.5) * 0.18,
+            alpha: Math.random() * 0.5 + 0.1,
+          }));
+        }
+
+        function drawWave(offset, alpha, color) {
+          ctx.beginPath();
+          ctx.moveTo(0, H * 0.5);
+          for (let x = 0; x <= W; x += 4) {
+            const y =
+              H * 0.5 +
+              Math.sin((x / W) * Math.PI * 4 + offset) * 28 +
+              Math.sin((x / W) * Math.PI * 7 + offset * 0.7) * 14;
+            ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = color;
+          ctx.globalAlpha = alpha;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+
+        let t = 0;
+        function frame() {
+          ctx.clearRect(0, 0, W, H);
+          t += 0.006;
+
+          // Subtle waves
+          drawWave(t,       0.12, "#72e6ff");
+          drawWave(t + 1.2, 0.07, "#2fb4d6");
+          drawWave(t + 2.4, 0.05, "#ff7b00");
+
+          // Floating particles
+          for (const p of particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0) p.x = W;
+            if (p.x > W) p.x = 0;
+            if (p.y < 0) p.y = H;
+            if (p.y > H) p.y = 0;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(114, 230, 255, ${p.alpha})`;
+            ctx.fill();
+          }
+
+          requestAnimationFrame(frame);
+        }
+
+        resize();
+        initParticles();
+        frame();
+        window.addEventListener("resize", () => { resize(); initParticles(); });
+      })();
+    </script>
+
+    <!-- Patch classTextValue to apply data-class for CSS badge coloring -->
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const classEl = document.getElementById("classTextValue");
+        if (!classEl) return;
+        const observer = new MutationObserver(() => {
+          classEl.dataset.class = classEl.textContent.trim();
+        });
+        observer.observe(classEl, { childList: true, characterData: true, subtree: true });
+      });
+    </script>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
